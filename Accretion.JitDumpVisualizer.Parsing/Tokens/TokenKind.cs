@@ -1,0 +1,37 @@
+﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
+{
+    internal enum TokenKind
+    {
+        Unknown,
+        Whitespace,
+        OpenBracket,
+        CloseBracket,        
+        OpenCurly,
+        CloseCurly,
+        OpenParen,
+        CloseParen,
+        LessThan,
+        GreaterThan,
+        Colon,
+        Semicolon,
+        EqualsSign,
+        SingleQuote,
+        DoubleQuote,
+        Comma,
+        Hash,
+        QuestionMark,
+        Star,
+        FourStars,
+        SixStars,
+        FifteenStars,
+        Dot,
+        TwoDots,
+        ThreeDots,
+        LineOfOneHundredAndThirtySevenDashes,
+        EndOfLine,
+        EndOfFile,
+        Integer,
+        Word,
+        Identifier
+    }
+}

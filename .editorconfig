@@ -1,0 +1,5 @@
+﻿[*.cs]
+
+# IDE0057: Use range operator
+# Range on spans has worse performance when you only use Slice(int)
+csharp_style_prefer_range_operator = false:suggestion

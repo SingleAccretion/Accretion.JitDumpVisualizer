@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Accretion.JitDumpVisualizer.Parsing": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "JitDumpVisualizerEnableLogging": "true"
+      }
+    }
+  }
+}
