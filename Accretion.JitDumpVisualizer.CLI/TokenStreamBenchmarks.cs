@@ -20,12 +20,14 @@ namespace Accretion.JitDumpVisualizer.CLI
             _dumpHandle = GCHandle.Alloc(_dump, GCHandleType.Pinned);
         }
 
-        [Benchmark(OperationsPerInvoke = 1000)]
+        private const int IterationCount = 1000;
+
+        [Benchmark(OperationsPerInvoke = IterationCount)]
         public void Next()
         {
             var stream = new TokenStream((char*)_dumpHandle.AddrOfPinnedObject(), _dump.Length);
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < IterationCount; i++)
             {
                 stream.Next();
             }

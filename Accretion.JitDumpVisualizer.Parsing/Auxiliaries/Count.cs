@@ -8,7 +8,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
     {
         public static unsafe nint OfLeading(char* start, char* end, char character)
         {
-            if ((nint)(end - start) >= 2 * Vector128<ushort>.Count && Sse2.IsSupported)
+            if ((nint)end - (nint)start >= 2 * Vector128<byte>.Count && Sse2.IsSupported)
             {
                 var ptr = (ushort*)start;
 

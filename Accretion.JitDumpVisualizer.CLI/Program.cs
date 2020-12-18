@@ -13,7 +13,7 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            MeasureNextPerformance();
+            BenchmarkRunner.Run<CountLeadingBenchmarks>();
             return;
 
             MeasureNextThroughput();
@@ -66,8 +66,6 @@ namespace Accretion.JitDumpVisualizer.CLI
                 watch.Reset();
             }
         }
-
-        private static void MeasureNextPerformance() => BenchmarkRunner.Run<TokenStreamBenchmarks>();
 
         public static void CollectDumpStats()
         {
