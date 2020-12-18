@@ -10,4 +10,13 @@
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
+  <Target Condition="'$(RuntimeIdentifier)' == 'win-x64' AND '$(IsRunningShadowPublish)' != 'true'" Name="CopyToDisasmo" AfterTargets="Build">
+    <Exec Command="dotnet publish -r win-x64 -c $(Configuration) --self-contained true --no-restore --no-build /p:IsRunningShadowPublish=true" />
+    
+    <ItemGroup>
+      <PublishArtifact Include="$(PublishDir)*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PublishArtifact)" DestinationFolder="$(OutputPath)\..\Disasmo" />
+    <Message Text="Copied @(PublishArtifact)" Importance="High" />
+  </Target>
 </Project>

@@ -1,16 +1,35 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    internal struct TokenStream
+    internal unsafe struct TokenStream
     {
-        private readonly StringSegment _text;
-        private int _currentPosition;
-        private int _beginningOfLinePosition;
+        private readonly char* _end;
+        private char* _start;
 
-        public TokenStream(StringSegment text) : this() => _text = text;
+        public TokenStream(StringSegment text)
+        {
+            var textArray = GC.AllocateUninitializedArray<char>(text.Length, pinned: true);
+            text.AsSpan().CopyTo(textArray);
+
+            _start = (char*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(textArray));
+            _end = _start + text.Length;
+
+            Debug.Assert(*_end is '\0');
+        }
+
+        public TokenStream(char* start, nint length)
+        {
+            _start = start;
+            _end = _start + length;
+
+            Debug.Assert(*_end is '\0');
+        }
 
         public void Skip(int count)
         {
@@ -20,178 +39,25 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
         }
 
-        public Token NextRaw()
-        {
-            var token = PeekRaw();
-            Consume(token);
-
-            return token;
-        }
-
         public Token Next()
         {
-            var token = PeekRaw();
-            _currentPosition += token.Width;
-            if (token.Kind == TokenKind.Whitespace)
-            {
-                _beginningOfLinePosition = _currentPosition;
-                return Next();
-            }
+            var token = Peek(_start, _end, out var width);
+            _start += width;
 
             return token;
         }
 
-        public TokenSource? NextTokensBeforeAny(ReadOnlySpan<Token> tokens)
-        {
-            Debug.Assert(!tokens.Any(x => x.Kind == TokenKind.Whitespace));
+        public TokenSource? NextTokensBeforeAny(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
 
-            var originalPosition = _currentPosition;
-            while (PeekRaw() is Token token && !tokens.Contains(token))
-            {
-                Consume(token);
-            }
+        public TokenSource? NextTokensBefore(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
 
-            return new TokenSource(_text.Slice(originalPosition, _currentPosition - originalPosition));
-        }
+        public TokenSource? NextTokensAfter(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
 
-        public TokenSource? NextTokensBefore(ReadOnlySpan<Token> tokens)
-        {
-            var originalPosition = _currentPosition;
-            return TrySkipTo(tokens, skipOver: false) ? new TokenSource(_text.Slice(originalPosition, _currentPosition - originalPosition)) : null;
-        }
-
-        public TokenSource? NextTokensAfter(ReadOnlySpan<Token> tokens) => TrySkipTo(tokens, skipOver: true) ? new TokenSource(_text.Slice(_currentPosition)) : null;
-
-        public TokenSource NextLine()
-        {
-            while (PeekRaw() is Token { Kind: not TokenKind.EndOfLine } token)
-            {
-                Consume(token);
-            }
-            var line = new TokenSource(_text.Slice(_beginningOfLinePosition, _currentPosition - _beginningOfLinePosition));
-
-            Consume(new(TokenKind.EndOfLine));
-
-            return line;
-        }
-
-        private Token PeekRaw()
-        {
-            Debug.Assert(_currentPosition <= _text.Length);
-
-            var text = _text.Slice(_currentPosition);
-
-            if (text.Length == 0)
-            {
-                return new(TokenKind.EndOfFile);
-            }
-
-            var span = text.AsSpan();
-
-            // Whitespaces are every common and typically do not last long
-            if (char.IsWhiteSpace(span[0]))
-            {
-                for (int i = 1; i < span.Length; i++)
-                {
-                    if (!char.IsWhiteSpace(span[i]))
-                    {
-                        return new(text.Slice(0, i), TokenKind.Whitespace);
-                    }
-                }
-            }
-
-            TokenKind constantKind = span[0] switch
-            {
-                '[' => TokenKind.OpenBracket,
-                ']' => TokenKind.CloseBracket,
-                '{' => TokenKind.OpenCurly,
-                '}' => TokenKind.CloseCurly,
-                '(' => TokenKind.OpenParen,
-                ')' => TokenKind.CloseParen,
-                '<' => TokenKind.LessThan,
-                '>' => TokenKind.GreaterThan,
-                ':' => TokenKind.Colon,
-                ';' => TokenKind.Semicolon,
-                '=' => TokenKind.EqualsSign,
-                '\'' => TokenKind.SingleQuote,
-                '"' => TokenKind.SingleQuote,
-                ',' => TokenKind.Comma,
-                '\n' => TokenKind.EndOfLine,
-                '#' => TokenKind.Hash,
-                '?' => TokenKind.QuestionMark,
-                '*' when span.StartsWith(Token.FifteenStars) => TokenKind.FifteenStars,
-                '*' when span.StartsWith(Token.SixStars) => TokenKind.SixStars,
-                '*' when span.StartsWith(Token.FourStars) => TokenKind.FourStars,
-                '*' when span.StartsWith(Token.Star) => TokenKind.Star,
-                '.' when span.StartsWith(Token.ThreeDots) => TokenKind.ThreeDots,
-                '.' when span.StartsWith(Token.TwoDots) => TokenKind.TwoDots,
-                '.' when span.StartsWith(Token.Dot) => TokenKind.Dot,
-                '-' when span.StartsWith(Token.LineOfOneHundredAndThirtySevenDashes) => TokenKind.LineOfOneHundredAndThirtySevenDashes,
-                _ => TokenKind.Unknown
-            };
-
-            if (constantKind != TokenKind.Unknown)
-            {
-                return new Token(constantKind);
-            }
-
-            return PeekNonConstant();
-        }
-
-        private void Consume(Token token)
-        {
-            Debug.Assert(_currentPosition + token.Width <= _text.Length, $"The stream went out of bounds: current position is {_currentPosition}, the seek is {token.Width}.");
-
-            _currentPosition += token.Width;
-            if (token.Kind == TokenKind.EndOfLine)
-            {
-                _beginningOfLinePosition = _currentPosition;
-            }
-        }
-
-        private void Reset(int to) => _currentPosition = to;
-
-        private bool TrySkipTo(ReadOnlySpan<Token> tokens, bool skipOver)
-        {
-            while (PeekRaw().Kind != TokenKind.EndOfFile)
-            {
-                var matched = true;
-
-                var tokensStartPosition = _currentPosition;
-                while (Next() != tokens[0])
-                {
-                    tokensStartPosition = _currentPosition;
-                }
-
-                var backtrackPosition = _currentPosition;
-                for (int i = 1; i < tokens.Length; i++)
-                {
-                    if (Next() != tokens[i])
-                    {
-                        matched = false;
-                        Reset(backtrackPosition);
-                        break;
-                    }
-                }
-
-                if (matched)
-                {
-                    if (!skipOver)
-                    {
-                        Reset(tokensStartPosition);
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        public TokenSource NextLine() => throw new NotImplementedException();
 
         private Token PeekNonConstant()
         {
-            var text = _text.Slice(_currentPosition);
-            var span = text.AsSpan();
+            var span = new Span<char>(_start, (int)_end);
             var digitCount = 0;
             var letterCount = 0;
             var hexDigitCount = 0;
@@ -245,11 +111,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
             // Format of ------------ token: 12 charachters, letter, dashes, #, *
             Debug.Assert(kind != TokenKind.Unknown, $"'{span[0]}' is not a start of a recognizable token.");
-            return new Token(text.Slice(0, length), kind);
+            return new Token(kind, length);
         }
 
-        // This method does return a token to save on registers
-        // And avoid touching the stack more than neccessary
         // These are the preliminary results for frequencies of
         // various token types (as well as raw characters) in the dump
         // Whitespace                               31,18%
@@ -379,28 +243,71 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         // 'Z'                                      31     0,00%
         // 'Q'                                      27     0,00%
         // '!'                                      18     0,00%
-        private (TokenKind Kind, int Width) PeekNext()
+        [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
+        private static Token Peek(char* start, char* end, out nint width)
         {
-            var span = _text.AsSpan(_currentPosition);
-            if (span.Length != 0)
+            Debug.Assert(end - start >= 0);
+
+            nint padding = 0;
+            while (*start is ' ' or '\t')
             {
-                // We delibeartely use a simple for loop here
-                // Most whitespace tokens are not very long
-                if (char.IsWhiteSpace(span[0]))
-                {
-                    for (int i = 1; i < span.Length; i++)
-                    {
-                        if (!char.IsWhiteSpace(span[i]))
-                        {
-                            return (TokenKind.Whitespace, i);
-                        }
-                    }
-                }
-
-
+                padding++;
+                start++;
             }
 
-            return (TokenKind.Unknown, 0);
+            nint rawWidth;
+            Token token;
+            switch (*start)
+            {
+                case '\0': (token, rawWidth) = (new(TokenKind.EndOfFile), 0); break;
+                case '[': (token, rawWidth) = (new(TokenKind.OpenBracket), 1); break;
+                case ']': (token, rawWidth) = (new(TokenKind.CloseBracket), 1); break;
+                case '{': (token, rawWidth) = (new(TokenKind.OpenCurly), 1); break;
+                case '}': (token, rawWidth) = (new(TokenKind.CloseCurly), 1); break;
+                case '(': (token, rawWidth) = (new(TokenKind.OpenParen), 1); break;
+                case ')': (token, rawWidth) = (new(TokenKind.CloseParen), 1); break;
+                case '<': (token, rawWidth) = (new(TokenKind.LessThan), 1); break;
+                case '>': (token, rawWidth) = (new(TokenKind.GreaterThan), 1); break;
+                case ':': (token, rawWidth) = (new(TokenKind.Colon), 1); break;
+                case ';': (token, rawWidth) = (new(TokenKind.Semicolon), 1); break;
+                case '=': (token, rawWidth) = (new(TokenKind.EqualsSign), 1); break;
+                case '\'': (token, rawWidth) = (new(TokenKind.SingleQuote), 1); break;
+                case '"': (token, rawWidth) = (new(TokenKind.DoubleQuote), 1); break;
+                case ',': (token, rawWidth) = (new(TokenKind.Comma), 1); break;
+                case '\n': (token, rawWidth) = (new(TokenKind.EndOfLine), 1); break;
+                case '#': (token, rawWidth) = (new(TokenKind.Hash), 1); break;
+                case '?': (token, rawWidth) = (new(TokenKind.QuestionMark), 1); break;
+                case '.':
+                    switch (Count.OfLeading(start, end, '.'))
+                    {
+                        case 3: (token, rawWidth) = (new(TokenKind.ThreeDots), 3); break;
+                        case 2: (token, rawWidth) = (new(TokenKind.TwoDots), 2); break;
+                        default: (token, rawWidth) = (new(TokenKind.Dot), 1); break;
+                    }
+                    break;
+                case '*':
+                    switch (Count.OfLeading(start, end, '*'))
+                    {
+                        case 15: (token, rawWidth) = (new(TokenKind.FifteenStars), 15); break;
+                        case 4: (token, rawWidth) = (new(TokenKind.FourStars), 4); break;
+                        case 6: (token, rawWidth) = (new(TokenKind.SixStars), 6); break;
+                        default: (token, rawWidth) = (new(TokenKind.Star), 1); break;
+                    }
+                    break;
+                case '-' when Count.OfLeading(start, end, '-') == 137: (token, rawWidth) = (new(TokenKind.LineOfOneHundredAndThirtySevenDashes), 137); break;
+                case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9': return PeekInteger(out width);
+                default: (token, rawWidth) = (new(TokenKind.Unknown), 1); break;
+            }
+
+            width = padding + rawWidth;
+            return token;
+        }
+
+        private static Token PeekInteger(out nint width)
+        {
+            width = 1;
+
+            return new(TokenKind.Integer);
         }
     }
 }

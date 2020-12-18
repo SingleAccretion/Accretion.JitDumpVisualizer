@@ -1,8 +1,6 @@
-using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
 using Accretion.JitDumpVisualizer.Parsing.Parser;
 using Accretion.JitDumpVisualizer.Parsing.Tokens;
 using BenchmarkDotNet.Running;
-using ObjectLayoutInspector;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,12 +13,14 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            MeasureNextThroughput();
-            CollectDumpStats();
-
             MeasureNextPerformance();
             return;
 
+            MeasureNextThroughput();
+            return;
+            
+            CollectDumpStats();
+            return;
             var rawDump = File.ReadAllText("dump.txt");
 
             using var sw = new StreamWriter("output.txt");
@@ -75,7 +75,7 @@ namespace Accretion.JitDumpVisualizer.CLI
             var tokenStats = new Dictionary<TokenKind, long>();
             var stream = new TokenStream(rawDump);
 
-            while (stream.NextRaw() is { Kind: not TokenKind.EndOfFile } token)
+            while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
             {
                 if (tokenStats.ContainsKey(token.Kind))
                 {

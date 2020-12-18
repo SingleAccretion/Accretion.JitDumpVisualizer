@@ -2,29 +2,32 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Accretion.JitDumpVisualizer.CLI
 {
     // [MemoryDiagnoser]
     [DisassemblyDiagnoser(maxDepth: 3)]
     // [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.InstructionRetired, HardwareCounter.BranchMispredictions)]
-    public class TokenStreamBenchmarks
+    public unsafe class TokenStreamBenchmarks
     {
-        private TokenStream _stream;
         private readonly string _dump;
+        private readonly GCHandle _dumpHandle;
 
         public TokenStreamBenchmarks()
         {
             _dump = File.ReadAllText("dump.txt");
-            _stream = new(_dump);
+            _dumpHandle = GCHandle.Alloc(_dump, GCHandleType.Pinned);
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = 1000)]
         public void Next()
         {
-            if (_stream.Next().Kind == TokenKind.EndOfFile)
+            var stream = new TokenStream((char*)_dumpHandle.AddrOfPinnedObject(), _dump.Length);
+
+            for (int i = 0; i < 1000; i++)
             {
-                _stream = new(_dump);
+                stream.Next();
             }
         }
     }

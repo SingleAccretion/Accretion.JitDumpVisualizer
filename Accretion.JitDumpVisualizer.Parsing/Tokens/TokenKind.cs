@@ -32,6 +32,10 @@
         EndOfFile,
         Integer,
         Word,
-        Identifier
+        Identifier,
+        StartingPhase,
+        FinishingPhase,
+        NoChangesInPhase,
+        UnknownILRange
     }
 }

@@ -1,5 +1,4 @@
-﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
@@ -33,25 +32,24 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         public const string EndOfFile = "";
         public const string LineOfOneHundredAndThirtySevenDashes = "-----------------------------------------------------------------------------------------------------------------------------------------";
 
-        private readonly int _value;
+        // This hack ensures we get good codegen
+        private readonly ulong _token;
 
         public Token(TokenKind kind)
         {
             Debug.Assert(IsConstant(kind));
 
-            Kind = kind;
-            _value = 0;
+            _token = (ulong)kind;
         }
 
         public Token(TokenKind kind, int value)
         {
             Debug.Assert(kind == TokenKind.Integer);
 
-            Kind = kind;
-            _value = value;
+            _token = (ulong)value << 32 | (ulong)kind;
         }
 
-        public TokenKind Kind { get; }
+        public TokenKind Kind => (TokenKind)_token;
 
         public override string? ToString() => $"{Kind}";
 
@@ -117,8 +115,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         };
 
         public override bool Equals(object? obj) => obj is Token token && Equals(token);
-        public bool Equals(Token other) => Kind == other.Kind && _value == other._value;
-        public override int GetHashCode() => HashCode.Combine(Kind, _value);
+        public bool Equals(Token other) => _token == other._token;
+        public override int GetHashCode() => HashCode.Combine(_token);
 
         public static bool operator ==(Token left, Token right) => left.Equals(right);
         public static bool operator !=(Token left, Token right) => !(left == right);

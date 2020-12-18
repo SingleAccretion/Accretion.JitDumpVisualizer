@@ -1,6 +1,5 @@
 {
   "sdk": {
-    "allowPrerelease": false,
-    "version": "5.0.100"
+    "allowPrerelease": false
   }
 }

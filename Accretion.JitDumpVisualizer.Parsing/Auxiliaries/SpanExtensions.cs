@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 {
@@ -75,6 +79,51 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
             }
 
             return false;
+        }
+
+        public static unsafe int ConsecutiveCount(this ReadOnlySpan<char> span, char character)
+        {
+            if (span.Length >= 2 * Vector128<ushort>.Count && Sse2.IsSupported)
+            {
+                fixed (char* fixedPtr = &MemoryMarshal.GetReference(span))
+                {
+                    var ptr = (ushort*)fixedPtr;
+
+                    var vChar = Vector128.Create(character);
+
+                    var firstVector = Sse2.LoadVector128(ptr);
+                    var firstEqualityVector = Sse2.CompareEqual(firstVector, vChar);
+                    var firstMask = Sse2.MoveMask(firstEqualityVector.AsByte());
+
+                    var secondVector = Sse2.LoadVector128(ptr + Vector128<ushort>.Count);
+                    var secondEqualityVector = Sse2.CompareEqual(secondVector, vChar);
+                    var secondMask = Sse2.MoveMask(secondEqualityVector.AsByte());
+
+                    var mask = ~((secondMask << 16) | firstMask);
+                    if (mask != 0)
+                    {
+                        return BitOperations.TrailingZeroCount(mask) >> 1;
+                    }
+                }
+            }
+
+            return ConsecutiveCountSoftwerFallback(span, character);
+        }
+
+        private static int ConsecutiveCountSoftwerFallback(ReadOnlySpan<char> span, char character)
+        {
+            var count = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i] != character)
+                {
+                    return count;
+                }
+
+                count++;
+            }
+
+            return count;
         }
     }
 }
