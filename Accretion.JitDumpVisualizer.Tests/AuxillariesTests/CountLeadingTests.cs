@@ -1,10 +1,9 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
-using System;
 using Xunit;
 
 namespace Accretion.JitDumpVisualizer.Tests
 {
-    public class SpanConsecutiveCountTests
+    public class CountLeadingTests
     {
         [InlineData("", '*', 0)]
         [InlineData(" *", '*', 0)]
@@ -15,6 +14,13 @@ namespace Accretion.JitDumpVisualizer.Tests
         [InlineData("* * * * * *", '*', 1)]
         [InlineData("********************", '*', 20)]
         [Theory]
-        public void CountsCorrectly(string str, char character, int expected) => Assert.Equal(expected, str.AsSpan().ConsecutiveCount(character));
+        public unsafe void CountsCorrectly(string str, char character, int expected)
+        {
+            fixed (char* start = str)
+            {
+                var end = start + str.Length;
+                Assert.Equal(expected, Count.OfLeading(start, end, character));
+            }
+        }
     }
 }
