@@ -13,57 +13,64 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            BenchmarkRunner.Run<CountLeadingBenchmarks>();
-            return;
-
-            MeasureNextThroughput();
-            return;
-            
-            CollectDumpStats();
-            return;
+            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            // return;
+            // 
+            // MeasureNextThroughput();
+            // return;
+            // 
+            // CollectDumpStats();
+            // return;
             var rawDump = File.ReadAllText("dump.txt");
 
             using var sw = new StreamWriter("output.txt");
             var dump = new Dump(rawDump);
-            foreach (var phase in dump.Phases)
+            var stream = new TokenStream(rawDump);
+            while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
             {
-                sw.Write(phase.Name);
-                if (phase.NoChanges)
+                if (token.Kind == TokenKind.EndOfLine)
                 {
-                    sw.Write(" - no changes");
+                    sw.Write(Environment.NewLine);
                 }
-                sw.Write(Environment.NewLine);
+                else
+                {
+                    sw.Write($"{token} ");
+                    sw.Write(token);
+                }
             }
         }
 
-        public static void MeasureNextThroughput()
+        public unsafe static void MeasureNextThroughput()
         {
             var rawDump = new StreamReader("dump.txt").ReadToEnd();
             var count = 0;
             var avg = 0L;
-            while (true)
+            fixed (char* start = rawDump)
             {
-                var tokens = new TokenStream(rawDump);
-
-                var watch = Stopwatch.StartNew();
-                var n = 0;
-                while (tokens.Next().Kind != TokenKind.EndOfFile)
+                while (true)
                 {
-                    n++;
+                    var tokens = new TokenStream(start, rawDump.Length);
+
+                    var watch = Stopwatch.StartNew();
+                    var n = 0;
+                    while (tokens.Next().Kind != TokenKind.EndOfFile)
+                    {
+                        n++;
+                    }
+                    watch.Stop();
+                    count++;
+
+                    Console.SetCursorPosition(0, 0);
+                    Console.WriteLine($"It took {watch.ElapsedMilliseconds} ms to process {n} tokens.");
+
+                    var throughput = n / watch.ElapsedMilliseconds;
+                    avg = ((count - 1) * avg + throughput) / count;
+                    var nsPerToken = 1000_000d / avg;
+
+                    Console.SetCursorPosition(0, 1);
+                    Console.WriteLine($"The average throughput is {nsPerToken:N0} ns/token.");
+                    watch.Reset();
                 }
-                watch.Stop();
-                count++;
-
-                Console.SetCursorPosition(0, 0);
-                Console.WriteLine($"It took {watch.ElapsedMilliseconds} ms to process {n} tokens.");
-
-                var throughput = n / watch.ElapsedMilliseconds;
-                avg = ((count - 1) * avg + throughput) / count;
-                var nsPerToken = 1000_000d / avg;
-
-                Console.SetCursorPosition(0, 1);
-                Console.WriteLine($"The average throughput is {nsPerToken:N0} ns/token.");
-                watch.Reset();
             }
         }
 
@@ -107,7 +114,7 @@ namespace Accretion.JitDumpVisualizer.CLI
 
             DisplayStats(charStats);
         }
-        
+
         private static void DisplayStats<T>(Dictionary<T, long> stats)
         {
             var totalCount = stats.Select(x => x.Value).Sum();

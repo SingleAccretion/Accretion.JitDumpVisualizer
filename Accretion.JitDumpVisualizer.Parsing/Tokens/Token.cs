@@ -37,7 +37,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public Token(TokenKind kind)
         {
-            Debug.Assert(IsConstant(kind));
+            Debug.Assert(IsConstant(kind), $"Token of type {kind} is not constant.");
 
             _token = (ulong)kind;
         }
@@ -124,8 +124,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         private static bool IsConstant(TokenKind kind) => kind is not
            (TokenKind.Word or
             TokenKind.Integer or
-            TokenKind.Identifier or
-            TokenKind.Unknown or
-            TokenKind.EndOfLine);
+            TokenKind.Identifier);
     }
 }

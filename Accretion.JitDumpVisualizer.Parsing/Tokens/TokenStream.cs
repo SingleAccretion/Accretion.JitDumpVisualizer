@@ -1,5 +1,6 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -9,18 +10,25 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal unsafe struct TokenStream
     {
+        private static readonly List<object> _gcRoots = new List<object>();
+
         private readonly char* _end;
         private char* _start;
 
         public TokenStream(StringSegment text)
         {
-            var textArray = GC.AllocateUninitializedArray<char>(text.Length, pinned: true);
-            text.AsSpan().CopyTo(textArray);
+            var source = text.AsSpan();
 
-            _start = (char*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(textArray));
-            _end = _start + text.Length;
+            var pinnedBuffer = GC.AllocateArray<char>(source.Length + 1, pinned: true);
+            source.CopyTo(pinnedBuffer);
+            pinnedBuffer[^1] = '\0';
+            _gcRoots.Add(pinnedBuffer);
 
-            Debug.Assert(*_end is '\0');
+            _start = (char*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(pinnedBuffer));
+            _end = _start + source.Length;
+
+            Debug.Assert(source[^1] == *(_end - 1));
+            Debug.Assert(*_end == '\0', "Pinned buffer must be null-terminated.");
         }
 
         public TokenStream(char* start, nint length)
@@ -247,6 +255,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         private static Token Peek(char* start, char* end, out nint width)
         {
             Debug.Assert(end - start >= 0);
+            Debug.Assert(*end is '\0');
 
             nint padding = 0;
             while (*start is ' ' or '\t')
@@ -274,6 +283,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 case '\'': (token, rawWidth) = (new(TokenKind.SingleQuote), 1); break;
                 case '"': (token, rawWidth) = (new(TokenKind.DoubleQuote), 1); break;
                 case ',': (token, rawWidth) = (new(TokenKind.Comma), 1); break;
+                case '\r': (token, rawWidth) = (new(TokenKind.EndOfLine), 2); break;
                 case '\n': (token, rawWidth) = (new(TokenKind.EndOfLine), 1); break;
                 case '#': (token, rawWidth) = (new(TokenKind.Hash), 1); break;
                 case '?': (token, rawWidth) = (new(TokenKind.QuestionMark), 1); break;
@@ -295,7 +305,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                     break;
                 case '-' when Count.OfLeading(start, end, '-') == 137: (token, rawWidth) = (new(TokenKind.LineOfOneHundredAndThirtySevenDashes), 137); break;
-                case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9': return PeekInteger(out width);
+                case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9': token = PeekInteger(out rawWidth); break;
                 default: (token, rawWidth) = (new(TokenKind.Unknown), 1); break;
             }
 
@@ -307,7 +317,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             width = 1;
 
-            return new(TokenKind.Integer);
+            return new(TokenKind.Integer, 1);
         }
     }
 }
