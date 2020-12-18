@@ -13,14 +13,14 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
-            // return;
-            // 
-            // MeasureNextThroughput();
-            // return;
-            // 
-            // CollectDumpStats();
-            // return;
+            BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            return;
+            
+            MeasureNextThroughput();
+            return;
+            
+            CollectDumpStats();
+            return;
             var rawDump = File.ReadAllText("dump.txt");
 
             using var sw = new StreamWriter("output.txt");
@@ -35,7 +35,6 @@ namespace Accretion.JitDumpVisualizer.CLI
                 else
                 {
                     sw.Write($"{token} ");
-                    sw.Write(token);
                 }
             }
         }
@@ -126,5 +125,7 @@ namespace Accretion.JitDumpVisualizer.CLI
             Console.WriteLine($"Total: {totalCount,40}");
             Console.WriteLine();
         }
+
+
     }
 }

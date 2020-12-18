@@ -50,8 +50,23 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         }
 
         public TokenKind Kind => (TokenKind)_token;
+        private ulong RawValue => _token >> 32;
 
-        public override string? ToString() => $"{Kind}";
+        public override string? ToString()
+        {
+            var stringification = $"{Kind}";
+            object? value = Kind switch
+            {
+                TokenKind.Integer => RawValue,
+                _ => null
+            };
+            if (value is not null)
+            {
+                stringification += $": {value}";
+            }
+
+            return stringification;
+        }
 
         public static int GetWidth(TokenKind kind) => kind switch
         {

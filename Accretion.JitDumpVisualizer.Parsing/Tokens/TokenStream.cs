@@ -254,8 +254,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
         private static Token Peek(char* start, char* end, out nint width)
         {
-            Debug.Assert(end - start >= 0);
-            Debug.Assert(*end is '\0');
+            Debug.Assert(end - start >= 0, "There is no peeking outside the bounds.");
+            Debug.Assert(*end is '\0', "The source buffer must be alive.");
 
             nint padding = 0;
             while (*start is ' ' or '\t')
@@ -281,6 +281,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 case ';': (token, rawWidth) = (new(TokenKind.Semicolon), 1); break;
                 case '=': (token, rawWidth) = (new(TokenKind.EqualsSign), 1); break;
                 case '\'': (token, rawWidth) = (new(TokenKind.SingleQuote), 1); break;
+                case '|': (token, rawWidth) = (new(TokenKind.Pipe), 1); break;
                 case '"': (token, rawWidth) = (new(TokenKind.DoubleQuote), 1); break;
                 case ',': (token, rawWidth) = (new(TokenKind.Comma), 1); break;
                 case '\r': (token, rawWidth) = (new(TokenKind.EndOfLine), 2); break;
@@ -305,19 +306,93 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                     break;
                 case '-' when Count.OfLeading(start, end, '-') == 137: (token, rawWidth) = (new(TokenKind.LineOfOneHundredAndThirtySevenDashes), 137); break;
-                case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9': token = PeekInteger(out rawWidth); break;
-                default: (token, rawWidth) = (new(TokenKind.Unknown), 1); break;
+                case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9': token = PeekInteger(start, out rawWidth); break;
+                case 'B':
+                    switch (start[1])
+                    {
+                        case 'B':
+                            switch (start[2])
+                            {
+                                // BBnum
+                                case 'n': (token, rawWidth) = (new(TokenKind.BasicBlockNumberColumnHeader), 5); break;
+                                // BBid
+                                case 'i': (token, rawWidth) = (new(TokenKind.BasicBlockIdColumnHeader), 4); break;
+                                // BB01
+                                default: (token, rawWidth) = (new(TokenKind.BasicBlock, ParseIntegerTwoDigits(start + 2)), 4); break;
+                            }
+                            break;
+                        default: goto Unknown;
+                    }
+                    break;
+                default:
+                Unknown:
+                    (token, rawWidth) = (new(TokenKind.Unknown), 1); break;
             }
 
             width = padding + rawWidth;
             return token;
         }
 
-        private static Token PeekInteger(out nint width)
+        // All integers in the dump start with characters 0 through 9 
+        private static Token PeekInteger(char* start, out nint width)
         {
-            width = 1;
+            width = 0;
+            var value = 0;
+            // Largest numers in the dump have 16 digits
+            var digits = stackalloc int[16];
 
-            return new(TokenKind.Integer, 1);
+            var integerBase = 10;
+            while (true)
+            {
+                var delta = 0;
+                var ch = *start;
+                switch (ch)
+                {
+                    // This is correct even taking into account the "0x" prefix (as it will be counted as a leading digit)
+                    case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9':
+                        delta = '0';
+                        break;
+                    case 'a' or 'b' or 'c' or 'd' or 'e' or 'f':
+                        delta = 'a' - 10;
+                        integerBase = 16;
+                        break;
+                    case 'B' or 'C' or 'D' or 'E' or 'F':
+                        delta = 'A' - 10;
+                        integerBase = 16;
+                        break;
+                    case 'x' or 'h':
+                        integerBase = 16;
+                        break;
+                    default:
+                        Debug.Assert(width <= 16);
+
+                        var multiplier = 1;
+                        for (nint i = width - 1; i >= 0; i--)
+                        {
+                            value += digits[i] * multiplier;
+                            multiplier *= integerBase;
+                        }
+
+                        return new(TokenKind.Integer, value);
+                }
+
+                digits[width] = ch - delta;
+                width++;
+                start++;
+            }
+        }
+
+        private static int ParseIntegerTwoDigits(char* start)
+        {
+            var d1 = start[0];
+            var d0 = start[1];
+
+            Debug.Assert(char.IsDigit(d0) && char.IsDigit(d1), $"{d0} or {d1} is not a digit.");
+
+            d0 -= '0';
+            d1 -= '0';
+
+            return d0 + 10 * d1;
         }
     }
 }
