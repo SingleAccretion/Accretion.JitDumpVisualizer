@@ -32,6 +32,7 @@
         BasicBlock,
         BasicBlockNumberColumnHeader,
         BasicBlockIdColumnHeader,
+        Statement,
         EndOfLine,
         EndOfFile,
         Integer,

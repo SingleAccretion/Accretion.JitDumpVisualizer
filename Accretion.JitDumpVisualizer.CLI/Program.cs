@@ -13,30 +13,45 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            BenchmarkRunner.Run<TokenStreamBenchmarks>();
-            return;
-            
-            MeasureNextThroughput();
-            return;
-            
-            CollectDumpStats();
-            return;
+            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            // return;
+            // 
+            // MeasureNextThroughput();
+            // return;
+            // 
+            // CollectDumpStats();
+            // return;
             var rawDump = File.ReadAllText("dump.txt");
 
-            using var sw = new StreamWriter("output.txt");
-            var dump = new Dump(rawDump);
-            var stream = new TokenStream(rawDump);
-            while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
+            var list = new List<string>();
+            foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("Starting PHASE")))
             {
-                if (token.Kind == TokenKind.EndOfLine)
-                {
-                    sw.Write(Environment.NewLine);
-                }
-                else
-                {
-                    sw.Write($"{token} ");
-                }
+                var index = line.IndexOf("Starting PHASE") + "Starting PHASE ".Length;
+                var lastIndex = line.Replace(" (1, false)", "").Length;
+                var phaseName = line[index..lastIndex].Trim();
+                list.Add(phaseName);
             }
+
+            list = list.Distinct().ToList();
+            for (int i = 0; i < list.Count; i++)
+            {
+                Console.WriteLine(list[i]);
+            }
+
+            // using var sw = new StreamWriter("output.txt");
+            // var dump = new Dump(rawDump);
+            // var stream = new TokenStream(rawDump);
+            // while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
+            // {
+            //     if (token.Kind == TokenKind.EndOfLine)
+            //     {
+            //         sw.Write(Environment.NewLine);
+            //     }
+            //     else
+            //     {
+            //         sw.Write($"{token} ");
+            //     }
+            // }
         }
 
         public unsafe static void MeasureNextThroughput()

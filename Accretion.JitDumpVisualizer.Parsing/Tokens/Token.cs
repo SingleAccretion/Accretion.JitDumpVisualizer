@@ -5,33 +5,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal readonly struct Token : IEquatable<Token>
     {
-        public const string OpenBracket = "[";
-        public const string CloseBracket = "]";
-        public const string OpenCurly = "{";
-        public const string CloseCurly = "}";
-        public const string OpenParen = "(";
-        public const string CloseParen = ")";
-        public const string LessThan = "<";
-        public const string GreaterThan = ">";
-        public const string Colon = ":";
-        public const string Semicolon = ";";
-        public const string EqualsSign = "=";
-        public const string SingleQuote = "\'";
-        public const string DoubleQuote = "\"";
-        public const string Comma = ",";
-        public const string Hash = "#";
-        public const string QuestionMark = "?";
-        public const string Star = "*";
-        public const string FourStars = "****";
-        public const string SixStars = "******";
-        public const string FifteenStars = "***************";
-        public const string Dot = ".";
-        public const string TwoDots = "..";
-        public const string ThreeDots = "...";
-        public const string EndOfLine = "\n";
-        public const string EndOfFile = "";
-        public const string LineOfOneHundredAndThirtySevenDashes = "-----------------------------------------------------------------------------------------------------------------------------------------";
-
         // This hack ensures we get good codegen
         private readonly ulong _token;
 
@@ -44,9 +17,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public Token(TokenKind kind, int value)
         {
-            Debug.Assert(kind == TokenKind.Integer);
+            Debug.Assert(kind is TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement);
 
             _token = (ulong)value << 32 | (ulong)kind;
+        }
+
+        public Token(TokenKind kind, RuyJitPhase phase)
+        {
+            Debug.Assert(kind is TokenKind.StartingPhase or TokenKind.FinishingPhase);
+
+            _token = (ulong)phase << 32 | (ulong)kind;
         }
 
         public TokenKind Kind => (TokenKind)_token;
@@ -57,7 +37,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var stringification = $"{Kind}";
             object? value = Kind switch
             {
-                TokenKind.Integer => RawValue,
+                TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement => RawValue,
                 _ => null
             };
             if (value is not null)
@@ -97,36 +77,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             TokenKind.EndOfLine => 1,
             TokenKind.EndOfFile => 0,
             _ => throw new ArgumentOutOfRangeException($"Token of kind {kind} has no constant width.")
-        };
-
-        public static string GetText(TokenKind kind) => kind switch
-        {
-            TokenKind.OpenBracket => OpenBracket,
-            TokenKind.CloseBracket => CloseBracket,
-            TokenKind.OpenCurly => OpenCurly,
-            TokenKind.CloseCurly => CloseCurly,
-            TokenKind.OpenParen => OpenParen,
-            TokenKind.CloseParen => CloseParen,
-            TokenKind.LessThan => LessThan,
-            TokenKind.GreaterThan => GreaterThan,
-            TokenKind.Colon => Colon,
-            TokenKind.Semicolon => Semicolon,
-            TokenKind.EqualsSign => EqualsSign,
-            TokenKind.SingleQuote => SingleQuote,
-            TokenKind.Comma => Comma,
-            TokenKind.Hash => Hash,
-            TokenKind.QuestionMark => QuestionMark,
-            TokenKind.Star => Star,
-            TokenKind.FourStars => FourStars,
-            TokenKind.SixStars => SixStars,
-            TokenKind.FifteenStars => FifteenStars,
-            TokenKind.Dot => Dot,
-            TokenKind.TwoDots => TwoDots,
-            TokenKind.ThreeDots => ThreeDots,
-            TokenKind.LineOfOneHundredAndThirtySevenDashes => LineOfOneHundredAndThirtySevenDashes,
-            TokenKind.EndOfLine => EndOfLine,
-            TokenKind.EndOfFile => EndOfFile,
-            _ => throw new ArgumentException($"No constant string exists for {kind}.")
         };
 
         public override bool Equals(object? obj) => obj is Token token && Equals(token);
