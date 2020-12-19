@@ -14,8 +14,10 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
-            // return;
+#if RELEASE
+            BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            return;
+#endif
             // 
             // MeasureNextThroughput();
             // return;
@@ -25,11 +27,15 @@ namespace Accretion.JitDumpVisualizer.CLI
             var rawDump = File.ReadAllText("dump.txt");
            
             // var list = new List<string>();
-            // foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("Starting PHASE")))
+            // foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("*************** In ")))
             // {
-            //     var index = line.IndexOf("Starting PHASE") + "Starting PHASE ".Length;
-            //     var lastIndex = line.Replace(" (1, false)", "").Length;
-            //     var phaseName = line[index..lastIndex].Trim();
+            //     var index = line.IndexOf("*************** In ") + "*************** In ".Length;
+            //     var lastIndex = line.IndexOf(')');
+            //     if (lastIndex < 0)
+            //     {
+            //         lastIndex = line.Length - 1;
+            //     }
+            //     var phaseName = line[index..(lastIndex + 1)].Trim();
             //     list.Add(phaseName);
             // }
             // 
@@ -38,6 +44,7 @@ namespace Accretion.JitDumpVisualizer.CLI
             // {
             //     Console.WriteLine(list[i]);
             // }
+            // return;
 
             using var sw = new StreamWriter("output.txt");
             var dump = new Dump(rawDump);

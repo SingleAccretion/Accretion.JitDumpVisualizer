@@ -1,33 +1,21 @@
-﻿using System;
-using System.Diagnostics;
+﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
+using System;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal readonly struct Token : IEquatable<Token>
     {
-        // This hack ensures things stay in registers
+        // This ensures things stay in registers but pays for that in constructor size
         private readonly ulong _token;
 
         public Token(TokenKind kind)
         {
-            Debug.Assert(IsConstant(kind), $"Token of type {kind} is not constant.");
+            Assert.True(IsConstant(kind), $"Token of type {kind} is not constant.");
 
             _token = (ulong)kind;
         }
 
-        public Token(TokenKind kind, int value)
-        {
-            Debug.Assert(kind is TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement);
-
-            _token = (ulong)value << 32 | (ulong)kind;
-        }
-
-        public Token(TokenKind kind, RuyJitPhase phase)
-        {
-            Debug.Assert(kind is TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase);
-
-            _token = (ulong)phase << 32 | (ulong)kind;
-        }
+        public Token(TokenKind kind, uint rawValue) => _token = (ulong)rawValue << 32 | (ulong)kind;
 
         public TokenKind Kind => (TokenKind)_token;
         private ulong RawValue => _token >> 32;
@@ -38,7 +26,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             object? value = Kind switch
             {
                 TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement => RawValue,
-                TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase => (RuyJitPhase)RawValue,
+                TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase => (RyuJitPhase)RawValue,
+                TokenKind.Function => (RyuJitFunction)RawValue,
                 _ => null
             };
             if (value is not null)

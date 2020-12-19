@@ -10,8 +10,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         public StringSegment(string source, int start, int length)
         {
-            Debug.Assert(length >= 0);
-            Debug.Assert(source.Length >= start + length);
+            Assert.True(length >= 0);
+            Assert.True(source.Length >= start + length);
 
             _source = source;
             _start = start;

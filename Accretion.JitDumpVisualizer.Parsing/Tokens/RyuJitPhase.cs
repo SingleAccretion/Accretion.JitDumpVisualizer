@@ -1,6 +1,6 @@
 ﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    internal enum RuyJitPhase
+    public enum RyuJitPhase
     {
         Unknown,
         PreImport,

@@ -41,6 +41,7 @@
         StartingTopLevelPhase,
         FinishingTopLevelPhase,
         NoChangesInPhase,
-        UnknownILRange
+        UnknownILRange,
+        Function
     }
 }

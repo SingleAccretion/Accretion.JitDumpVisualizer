@@ -43,7 +43,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         public ReadOnlyArray<T> AsReadOnlyArray()
         {
-            Debug.Assert(_array is not null);
+            Assert.True(_array is not null);
 
             return new ReadOnlyArray<T>(_array, Count);
         }
