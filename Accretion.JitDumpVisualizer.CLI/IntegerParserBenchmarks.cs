@@ -9,22 +9,22 @@ namespace Accretion.JitDumpVisualizer.CLI
 
         public const int IterationCount = 1000;
 
-        [Benchmark(OperationsPerInvoke = IterationCount)]
+        [Benchmark(Baseline = true, OperationsPerInvoke = IterationCount)]
         [Arguments(FourDigitNumber)]
-        public void ParseFourDigitNumberGeneric(string  str)
+        public void ParseFourDigitNumberBaseline(string str)
         {
             fixed (char* ptr = str)
             {
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    IntegersParser.ParseGenericInteger(ptr, out _);
+                    ParseIntegerFourDigitsBaseline(ptr);
                 }
             }
         }
 
         [Benchmark(OperationsPerInvoke = IterationCount)]
         [Arguments(FourDigitNumber)]
-        public void ParseFourDigitNumberSpecialized(string str)
+        public void ParseFourDigitNumber(string str)
         {
             fixed (char* ptr = str)
             {
@@ -35,17 +35,14 @@ namespace Accretion.JitDumpVisualizer.CLI
             }
         }
 
-        [Benchmark(OperationsPerInvoke = IterationCount)]
-        [Arguments(FourDigitNumber)]
-        public void ParseFourDigitNumberVectorized(string str)
+        private static int ParseIntegerFourDigitsBaseline(char* start)
         {
-            fixed (char* ptr = str)
-            {
-                for (int i = 0; i < IterationCount; i++)
-                {
-                    IntegersParser.ParseIntegerFourDigitsVectorized(ptr);
-                }
-            }
+            var d1 = start[0] - '0';
+            var d2 = start[1] - '0';
+            var d3 = start[2] - '0';
+            var d4 = start[3] - '0';
+
+            return d1 * 1000 + d2 * 100 + d3 * 10 + d4;
         }
     }
 }

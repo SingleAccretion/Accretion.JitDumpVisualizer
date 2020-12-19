@@ -68,25 +68,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             VerifyAll(start, 4);
 
-            var d1 = start[0] - '0';
-            var d2 = start[1] - '0';
-            var d3 = start[2] - '0';
-            var d4 = start[3] - '0';
-
-            return d1 * 1000 + d2 * 100 + d3 * 10 + d4;
-        }
-
-        public static int ParseIntegerFourDigitsVectorized(char* start)
-        {
-            VerifyAll(start, 4);
-
-            if (Sse3.IsSupported)
+            if (Sse2.IsSupported)
             {
-                var vector = Vector128.CreateScalar(*(long*)start).AsInt16();
-                var unpack = Sse2.UnpackLow(vector, Vector128.Create((short)0));
-                var result = Sse2.MultiplyAddAdjacent(unpack, Vector128.Create(1000, 100, 10, 1).AsInt16());
+                var characters = Sse2.LoadScalarVector128((long*)start).AsInt16();
+                var values = Sse2.Subtract(characters, Vector128.Create('0').AsInt16());
+                var result = Sse2.MultiplyAddAdjacent(values, Vector128.Create(1000, 100, 10, 1, 0, 0, 0, 0));
 
-                return Ssse3.HorizontalAdd(result, result).ToScalar();
+                return result.GetElement(0) + result.GetElement(1);
             }
 
             return ParseGenericInteger(start, out _);

@@ -13,7 +13,7 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            // BenchmarkRunner.Run<IntegerParserBenchmarks>();
             // return;
             // 
             // MeasureNextThroughput();
@@ -32,7 +32,7 @@ namespace Accretion.JitDumpVisualizer.CLI
                 list.Add(phaseName);
             }
 
-            list = list.Distinct().ToList();
+            list = list.Distinct().OrderBy(x => x).ToList();
             for (int i = 0; i < list.Count; i++)
             {
                 Console.WriteLine(list[i]);

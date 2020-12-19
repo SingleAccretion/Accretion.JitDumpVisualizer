@@ -3,11 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
+    [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
     internal unsafe struct TokenStream
     {
         private static readonly List<object> _gcRoots = new List<object>();
@@ -63,7 +65,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public TokenSource NextLine() => throw new NotImplementedException();
 
-        [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
         private static Token Peek(char* start, char* end, out nint width)
         {
             Debug.Assert(end - start >= 0, "There is no peeking outside the bounds.");
@@ -185,8 +186,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                                             Debug.Assert(start[5] is 'g');
 
                                                             var skip = "Starting PHASE ".Length;
-                                                            var phase = ParseRuyJitPhase(start + skip);
-                                                            (token, rawWidth) = (new(TokenKind.StartingPhase, phase), skip);
+                                                            var phase = ParseRuyJitPhase(start + skip, out var phaseWidth);
+                                                            (token, rawWidth) = (new(TokenKind.StartingPhase, phase), phaseWidth + skip);
                                                             break;
                                                         default: goto Unknown;
                                                     }
@@ -212,70 +213,174 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return token;
         }
 
-        private static Token PeekInteger(char* start, out nint width)
+        private static RuyJitPhase ParseRuyJitPhase(char* start, out nint width)
         {
-            width = 0;
-            var value = 0;
-            // Largest numbers in the dump have 16 digits
-            var digits = stackalloc int[16];
-
-            var integerBase = 10;
-            while (true)
+            RuyJitPhase phase;
+            switch (start[0])
             {
-                var delta = 0;
-                var ch = *start;
-                switch (ch)
-                {
-                    // This is correct even taking into account the "0x" prefix (as it will be counted as a leading digit)
-                    case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9':
-                        delta = '0';
-                        break;
-                    case 'a' or 'b' or 'c' or 'd' or 'e' or 'f':
-                        delta = 'a' - 10;
-                        integerBase = 16;
-                        break;
-                    case 'B' or 'C' or 'D' or 'E' or 'F':
-                        delta = 'A' - 10;
-                        integerBase = 16;
-                        break;
-                    case 'x' or 'h':
-                        integerBase = 16;
-                        break;
-                    default:
-                        Debug.Assert(width <= 16);
-
-                        var multiplier = 1;
-                        for (nint i = width - 1; i >= 0; i--)
-                        {
-                            value += digits[i] * multiplier;
-                            multiplier *= integerBase;
-                        }
-
-                        return new(TokenKind.Integer, value);
-                }
-
-                digits[width] = ch - delta;
-                width++;
-                start++;
+                case 'A':
+                    switch (start[1])
+                    {
+                        case 'l': (phase, width) = (RuyJitPhase.AllocateObjects, "Allocate Objects".Length); break;
+                        default: (phase, width) = (RuyJitPhase.AssertionProp, "Assertion prop".Length); break;
+                    }
+                    break;
+                case 'B': (phase, width) = (RuyJitPhase.BuildSSARepresentation, "Build SSA representation".Length); break;
+                case 'C':
+                    switch (start[1])
+                    {
+                        case 'a': (phase, width) = (RuyJitPhase.CalculateStackLevelSlots, "Calculate stack level slots".Length); break;
+                        case 'l':
+                            switch (start[6])
+                            {
+                                case 'f': (phase, width) = (RuyJitPhase.CloneFinally, "Clone finally".Length); break;
+                                default: (phase, width) = (RuyJitPhase.CloneLoops, "Clone loops".Length); break;
+                            }
+                            break;
+                        case 'o':
+                            switch (start[8])
+                            {
+                                case 'b': (phase, width) = (RuyJitPhase.ComputeBlocksReachability, "Compute blocks reachability".Length); break;
+                                case 'e': (phase, width) = (RuyJitPhase.ComputeEdgeWeights, "Compute edge weights".Length); break;
+                                default: (phase, width) = (RuyJitPhase.ComputePreds, "Compute preds".Length); break;
+                            }
+                            break;
+                        default: (phase, width) = (RuyJitPhase.CreateEHFunclets, "Create EH funclets".Length); break;
+                    }
+                    break;
+                case 'D':
+                    switch (start[1])
+                    {
+                        case 'e': (phase, width) = (RuyJitPhase.DetermineFirstColdBlock, "Determine first cold block".Length); break;
+                        default:
+                            switch (start[3])
+                            {
+                                case '\'': (phase, width) = (RuyJitPhase.DoSimpleLowering, "Do 'simple' lowering".Length); break;
+                                default: (phase, width) = (RuyJitPhase.DoValueNumbering, "Do value numbering".Length); break;
+                            }
+                            break;
+                    }
+                    break;
+                case 'E':
+                    switch (start[1])
+                    {
+                        case 'a': (phase,  width) = (RuyJitPhase.EarlyValuePropagation, "Early Value Propagation".Length); break;
+                        case 'x': (phase, width) = (RuyJitPhase.ExpandPatchpoints, "Expand patchpoints".Length); break;
+                        default:
+                            switch (start[5])
+                            {
+                                case 'c': (phase, width) = (RuyJitPhase.EmitCode, "Emit code".Length); break;
+                                default: (phase, width) = (RuyJitPhase.EmitGCPlusEHTables, "Emit GC+EH tables".Length); break;
+                            }
+                            break;
+                    }
+                    break;
+                case 'F': (phase, width) = (RuyJitPhase.FindOperOrder, "Find oper order".Length); break;
+                case 'G':
+                    switch (start[1])
+                    {
+                        case 'e': (phase, width) = (RuyJitPhase.GenerateCode, "Generate code".Length); break;
+                        default: (phase, width) = (RuyJitPhase.GSCookie, "GS Cookie".Length); break;
+                    }
+                    break;
+                case 'H': (phase, width) = (RuyJitPhase.HoistLoopCode, "Hoist loop code".Length); break;
+                case 'I':
+                    switch (start[1])
+                    {
+                        case 'm': (phase, width) = (RuyJitPhase.Importation, "Importation".Length); break;
+                        default:
+                            switch (start[2])
+                            {
+                                case 'd': (phase, width) = (RuyJitPhase.IndirectCallTransform, "Indirect call transform".Length); break;
+                                default: (phase, width) = (RuyJitPhase.InsertGCPolls, "Insert GC Polls".Length); break;
+                            }
+                            break;
+                    }
+                    break;
+                case 'L':
+                    switch (start[1])
+                    {
+                        case 'i': (phase, width) = (RuyJitPhase.LinearScanRegisterAlloc, "Linear scan register alloc".Length); break;
+                        default: (phase, width) = (RuyJitPhase.LoweringNodeInfo, "Lowering nodeinfo".Length); break;
+                    }
+                    break;
+                case 'M':
+                    switch (start[1])
+                    {
+                        case 'a': (phase, width) = (RuyJitPhase.MarkLocalVars, "Mark local vars".Length); break;
+                        case 'e':
+                            switch (start[6])
+                            {
+                                case 'c': (phase, width) = (RuyJitPhase.MergeCallfinallyChains, "Merge callfinally chains".Length); break;
+                                default: (phase, width) = (RuyJitPhase.MergeThrowBlocks, "Merge throw blocks".Length); break;
+                            }
+                            break;
+                        default:
+                            switch (start[8])
+                            {
+                                case 'A': (phase, width) = (RuyJitPhase.MorphAddInternalBlocks, "Morph - Add internal blocks".Length); break;
+                                case 'B': (phase, width) = (RuyJitPhase.MorphByRefs, "Morph - ByRefs".Length); break;
+                                case 'G': (phase, width) = (RuyJitPhase.MorphGlobal, "Morph - Global".Length); break;
+                                case 'I':
+                                    switch (start[10])
+                                    {
+                                        case 'i': (phase, width) = (RuyJitPhase.MorphInit, "Morph - Init".Length); break;
+                                        default: (phase, width) = (RuyJitPhase.MorphInlining, "Morph - Inlining".Length); break;
+                                    }
+                                    break;
+                                case 'P': (phase, width) = (RuyJitPhase.MorphPromoteStructs, "Morph - Promote Structs".Length); break;
+                                default: (phase, width) = (RuyJitPhase.MorphStructsAddressExposed, "Morph - Structs/AddrExp".Length); break;
+                            }
+                            break;
+                    }
+                    break;
+                case 'O':
+                    switch (start[9])
+                    {
+                        case 'b': (phase, width) = (RuyJitPhase.OptimizeBools, "Optimize bools".Length); break;
+                        case 'i': (phase, width) = (RuyJitPhase.OptimizeIndexChecks, "Optimize index checks".Length); break;
+                        case 'l':
+                            switch (start[10])
+                            {
+                                case 'a': (phase, width) = (RuyJitPhase.OptimizeLayout, "Optimize layout".Length); break;
+                                default: (phase, width) = (RuyJitPhase.OptimizeLoops, "Optimize loops".Length); break;
+                            }
+                            break;
+                        default: (phase, width) = (RuyJitPhase.OptimizeValnumCSEs, "Optimize Valnum CSEs".Length); break;
+                    }
+                    break;
+                case 'P':
+                    switch (start[1])
+                    {
+                        case 'o': (phase, width) = (RuyJitPhase.PostImport, "Post-import".Length); break;
+                        default: (phase, width) = (RuyJitPhase.PreImport, "Pre-import".Length); break;
+                    }
+                    break;
+                case 'R':
+                    switch (start[1])
+                    {
+                        case 'a': (phase, width) = (RuyJitPhase.RationalizeIR, "Rationalize IR".Length); break;
+                        default:
+                            switch (start[13])
+                            {
+                                case 'f': (phase, width) = (RuyJitPhase.RemoveEmptyFinally, "Remove empty finally".Length); break;
+                                default: (phase, width) = (RuyJitPhase.RemoveEmptyTry, "Remove empty try".Length); break;
+                            }
+                            break;
+                    }
+                    break;
+                case 'S': (phase, width) = (RuyJitPhase.SetBlockOrder, "Set block order".Length); break;
+                case 'U':
+                    switch (start[1])
+                    {
+                        case 'n': (phase, width) = (RuyJitPhase.UnrollLoops, "Unroll loops".Length); break;
+                        default: (phase, width) = (RuyJitPhase.UpdateFlowGraphEarlyPass, "Update flow graph early pass".Length); break;
+                    }
+                    break;
+                default: (phase, width) = (RuyJitPhase.VNBasedCopyPropagation, "VN based copy prop".Length); break; ;
             }
-        }
 
-        private static int ParseIntegerFourDigits(char* start)
-        {
-            var d1 = start[0];
-            var d0 = start[1];
-
-            Debug.Assert(char.IsDigit(d0) && char.IsDigit(d1), $"{d1} or {d0} is not a digit.");
-
-            d0 -= '0';
-            d1 -= '0';
-
-            return d0 + 10 * d1;
-        }
-
-        private static RuyJitPhase ParseRuyJitPhase(char* start)
-        {
-            throw new NotImplementedException();
+            return phase;
         }
     }
 }
