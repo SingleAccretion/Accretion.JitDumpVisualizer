@@ -5,7 +5,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal readonly struct Token : IEquatable<Token>
     {
-        // This hack ensures we get good codegen
+        // This hack ensures things stay in registers
         private readonly ulong _token;
 
         public Token(TokenKind kind)
@@ -24,7 +24,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public Token(TokenKind kind, RuyJitPhase phase)
         {
-            Debug.Assert(kind is TokenKind.StartingPhase or TokenKind.FinishingPhase);
+            Debug.Assert(kind is TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase);
 
             _token = (ulong)phase << 32 | (ulong)kind;
         }
@@ -38,6 +38,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             object? value = Kind switch
             {
                 TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement => RawValue,
+                TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase => (RuyJitPhase)RawValue,
                 _ => null
             };
             if (value is not null)

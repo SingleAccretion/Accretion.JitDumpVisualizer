@@ -38,8 +38,8 @@
         Integer,
         Word,
         Identifier,
-        StartingPhase,
-        FinishingPhase,
+        StartingTopLevelPhase,
+        FinishingTopLevelPhase,
         NoChangesInPhase,
         UnknownILRange
     }

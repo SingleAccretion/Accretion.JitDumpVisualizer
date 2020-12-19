@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -16,6 +15,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         private readonly char* _end;
         private char* _start;
+        private TokenKind _lastTokenKind;
 
         public TokenStream(StringSegment text)
         {
@@ -28,6 +28,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
             _start = (char*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(pinnedBuffer));
             _end = _start + source.Length;
+            _lastTokenKind = TokenKind.Unknown;
 
             Debug.Assert(source[^1] == *(_end - 1));
             Debug.Assert(*_end == '\0', "Pinned buffer must be null-terminated.");
@@ -37,6 +38,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             _start = start;
             _end = _start + length;
+            _lastTokenKind = TokenKind.Unknown;
 
             Debug.Assert(*_end is '\0');
         }
@@ -49,10 +51,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Token Next()
         {
-            var token = Peek(_start, _end, out var width);
+            var token = Peek(_start, _end, _lastTokenKind, out var width);
             _start += width;
+            _lastTokenKind = token.Kind;
 
             return token;
         }
@@ -65,7 +69,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public TokenSource NextLine() => throw new NotImplementedException();
 
-        private static Token Peek(char* start, char* end, out nint width)
+        private static Token Peek(char* start, char* end, TokenKind lastToken, out nint width)
         {
             Debug.Assert(end - start >= 0, "There is no peeking outside the bounds.");
             Debug.Assert(*end is '\0', "The source buffer must be alive.");
@@ -134,13 +138,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 // BBid
                                 case 'i': (token, rawWidth) = (new(TokenKind.BasicBlockIdColumnHeader), 4); break;
                                 // In fgDebugCheckBBlist, BBJ_ALWAYS, BBJ_NONE, RefTypeBB, <some> BB
-                                case 'l' or 'J' or ' ': goto Unknown;
+                                case 'l' or 'J' or ' ': goto ReturnUnknown;
                                 // BBXX
                                 default:
                                     switch (start[3])
                                     {
                                         // Name in register allocation table
-                                        case ' ': goto Unknown;
+                                        case ' ': goto ReturnUnknown;
                                         default:
                                             (token, rawWidth) = (new(TokenKind.BasicBlock, IntegersParser.ParseIntegerTwoDigits(start + 2)), 4);
                                             break;
@@ -148,64 +152,33 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        default: goto Unknown;
+                        default: goto ReturnUnknown;
                     }
                     break;
-                case 'S':
-                    switch (start[1])
-                    {
-                        case 'T':
-                            switch (start[2])
-                            {
-                                case 'M':
-                                    switch (start[3])
-                                    {
-                                        case 'T':
-                                            (token, rawWidth) = (new(TokenKind.Statement, IntegersParser.ParseIntegerFiveDigits(start + 4)), 9);
-                                            break;
-                                        default: goto Unknown;
-                                    }
-                                    break;
-                                default: goto Unknown;
-                            }
-                            break;
-                        case 't':
-                            switch (start[1])
-                            {
-                                case 'a':
-                                    switch (start[2])
-                                    {
-                                        case 'r':
-                                            switch (start[3])
-                                            {
-                                                case 't':
-                                                    switch (start[4])
-                                                    {
-                                                        case 'i':
-                                                            Debug.Assert(start[4] is 'n');
-                                                            Debug.Assert(start[5] is 'g');
+                case 'S' when lastToken == TokenKind.FifteenStars:
+                    const string StartingPhase = "Starting PHASE";
 
-                                                            var skip = "Starting PHASE ".Length;
-                                                            var phase = ParseRuyJitPhase(start + skip, out var phaseWidth);
-                                                            (token, rawWidth) = (new(TokenKind.StartingPhase, phase), phaseWidth + skip);
-                                                            break;
-                                                        default: goto Unknown;
-                                                    }
-                                                    break;
-                                                default: goto Unknown;
-                                            }
-                                            break;
-                                        default: goto Unknown;
-                                    }
-                                    break;
-                                default: goto Unknown;
-                            }
-                            break;
-                        default: goto Unknown;
-                    }
+                    Debug.Assert(new string(start, 0, StartingPhase.Length) == StartingPhase);
+
+                    var kind = TokenKind.StartingTopLevelPhase;
+                    var skip = StartingPhase.Length + 1;
+
+                    goto ReturnPhase;
+                case 'F' when lastToken == TokenKind.FifteenStars:
+                    const string FinishingPhase = "Finishing PHASE";
+
+                    Debug.Assert(new string(start, 0, FinishingPhase.Length) == FinishingPhase);
+
+                    kind = TokenKind.FinishingTopLevelPhase;
+                    skip = FinishingPhase.Length + 1;
+
+                    // This saves on a lengthy Token constructor
+                ReturnPhase:
+                    var phase = ParseRuyJitPhase(start + skip, out var phaseWidth);
+                    (token, rawWidth) = (new(kind, phase), phaseWidth + skip);
                     break;
                 default:
-                Unknown:
+                ReturnUnknown:
                     (token, rawWidth) = (new(TokenKind.Unknown), 1); break;
             }
 
@@ -264,7 +237,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 case 'E':
                     switch (start[1])
                     {
-                        case 'a': (phase,  width) = (RuyJitPhase.EarlyValuePropagation, "Early Value Propagation".Length); break;
+                        case 'a': (phase, width) = (RuyJitPhase.EarlyValuePropagation, "Early Value Propagation".Length); break;
                         case 'x': (phase, width) = (RuyJitPhase.ExpandPatchpoints, "Expand patchpoints".Length); break;
                         default:
                             switch (start[5])

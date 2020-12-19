@@ -10,8 +10,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             digitCount = 0;
             var value = 0;
-            // Largest numbers in the dump have 16 digits
-            var digits = stackalloc int[16];
+
+            const int MaxDigitCount = 17;
+            // Largest numbers in the dump have 17 digits (including the leading zero in "0x")
+            // We overestimate here for safety
+            var digits = stackalloc int[32];
 
             var integerBase = 10;
             while (true)
@@ -33,10 +36,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         integerBase = 16;
                         break;
                     case 'x' or 'h':
+                        delta = 0;
                         integerBase = 16;
                         break;
                     default:
-                        Debug.Assert(digitCount <= 16);
+                        Debug.Assert(digitCount <= MaxDigitCount);
 
                         var multiplier = 1;
                         for (nint i = digitCount - 1; i >= 0; i--)
@@ -48,8 +52,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         return value;
                 }
 
-                digits[digitCount] = ch - delta;
-                digitCount++;
+                Debug.Assert(digitCount < MaxDigitCount);
+                if (delta != 0)
+                {
+                    digits[digitCount] = ch - delta;
+                    digitCount++;
+                }
                 start++;
             }
         }

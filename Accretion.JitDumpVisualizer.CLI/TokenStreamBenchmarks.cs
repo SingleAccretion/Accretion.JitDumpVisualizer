@@ -20,17 +20,33 @@ namespace Accretion.JitDumpVisualizer.CLI
             _dumpHandle = GCHandle.Alloc(_dump, GCHandleType.Pinned);
         }
 
-        private const int IterationCount = 1000;
-
-        [Benchmark(OperationsPerInvoke = IterationCount)]
-        public void Next()
+        [Benchmark]
+        public void TokenizeWholeDump()
         {
             var stream = new TokenStream((char*)_dumpHandle.AddrOfPinnedObject(), _dump.Length);
+            
+            while (stream.Next().Kind != TokenKind.EndOfFile) { }
+        }
 
-            for (int i = 0; i < IterationCount; i++)
+        [Benchmark(Baseline = true)]
+        public long Baseline()
+        {
+            long a1 = 0;
+            long a2 = 0;
+            long a3 = 0;
+            long counter = 2_000_000;
+            while (counter >= 0)
             {
-                stream.Next();
+                a1++;
+                a2++;
+                a3++;
+                a1 *= a2;
+                a2 *= a3;
+                a3 *= a1;
+                counter--;
             }
+
+            return a1 + a2 + a3 + counter;
         }
     }
 }

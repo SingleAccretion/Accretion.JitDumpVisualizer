@@ -6,14 +6,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Accretion.JitDumpVisualizer.CLI
 {
-    class Program
+    unsafe class Program
     {
         static void Main(string[] args)
         {
-            // BenchmarkRunner.Run<IntegerParserBenchmarks>();
+            // BenchmarkRunner.Run<TokenStreamBenchmarks>();
             // return;
             // 
             // MeasureNextThroughput();
@@ -22,36 +23,36 @@ namespace Accretion.JitDumpVisualizer.CLI
             // CollectDumpStats();
             // return;
             var rawDump = File.ReadAllText("dump.txt");
-
-            var list = new List<string>();
-            foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("Starting PHASE")))
-            {
-                var index = line.IndexOf("Starting PHASE") + "Starting PHASE ".Length;
-                var lastIndex = line.Replace(" (1, false)", "").Length;
-                var phaseName = line[index..lastIndex].Trim();
-                list.Add(phaseName);
-            }
-
-            list = list.Distinct().OrderBy(x => x).ToList();
-            for (int i = 0; i < list.Count; i++)
-            {
-                Console.WriteLine(list[i]);
-            }
-
-            // using var sw = new StreamWriter("output.txt");
-            // var dump = new Dump(rawDump);
-            // var stream = new TokenStream(rawDump);
-            // while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
+           
+            // var list = new List<string>();
+            // foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("Starting PHASE")))
             // {
-            //     if (token.Kind == TokenKind.EndOfLine)
-            //     {
-            //         sw.Write(Environment.NewLine);
-            //     }
-            //     else
-            //     {
-            //         sw.Write($"{token} ");
-            //     }
+            //     var index = line.IndexOf("Starting PHASE") + "Starting PHASE ".Length;
+            //     var lastIndex = line.Replace(" (1, false)", "").Length;
+            //     var phaseName = line[index..lastIndex].Trim();
+            //     list.Add(phaseName);
             // }
+            // 
+            // list = list.Distinct().OrderBy(x => x).ToList();
+            // for (int i = 0; i < list.Count; i++)
+            // {
+            //     Console.WriteLine(list[i]);
+            // }
+
+            using var sw = new StreamWriter("output.txt");
+            var dump = new Dump(rawDump);
+            var stream = new TokenStream(rawDump);
+            while (stream.Next() is { Kind: not TokenKind.EndOfFile } token)
+            {
+                if (token.Kind == TokenKind.EndOfLine)
+                {
+                    sw.Write(Environment.NewLine);
+                }
+                else
+                {
+                    sw.Write($"{token} ");
+                }
+            }
         }
 
         public unsafe static void MeasureNextThroughput()
