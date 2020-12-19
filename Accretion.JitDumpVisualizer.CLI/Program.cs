@@ -58,6 +58,7 @@ namespace Accretion.JitDumpVisualizer.CLI
                 else
                 {
                     sw.Write($"{token} ");
+                    sw.Flush();
                 }
             }
         }

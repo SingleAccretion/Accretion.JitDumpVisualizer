@@ -55,7 +55,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             var token = Peek(_start, _end, _lastTokenKind, out var width);
             _start += width;
-            _lastTokenKind = token.Kind;
+            if (token.Kind != TokenKind.EndOfLine)
+            {
+                _lastTokenKind = token.Kind;
+            }
 
             return token;
         }
@@ -68,48 +71,68 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public TokenSource NextLine() => throw new NotImplementedException();
 
-        private static Token Peek(char* start, char* end, TokenKind lastToken, out nint width)
+        private static Token Peek(char* start, char* end, TokenKind lastToken, out nint finalWidth)
         {
-            Assert.True(end - start >= 0, "There is no peeking outside the bounds.");
+            Assert.True(end - start >= 0, "No peeking outside the bounds.");
             Assert.True(*end is '\0', "The source buffer must be alive.");
 
             nint padding = 0;
-            while (*start is ' ' or '\t')
+            while (*start is ' ' or '\t'
+#if RELEASE
+                or '\r' or '\n'
+#endif
+                )
             {
                 padding++;
                 start++;
             }
+            finalWidth = padding;
 
             TokenKind kind;
             nint rawWidth = 0;
-            uint rawValue = 0;
+            int rawValue = 0;
             var first = start[0];
+
+#if DEBUG
+            if (first is '\n')
+            {
+                finalWidth += 1;
+                return new(TokenKind.EndOfLine);
+            }
+            else if (first is '\r')
+            {
+                Assert.Equal(start, "\r\n");
+                finalWidth += 2;
+                return new(TokenKind.EndOfLine);
+            }
+#endif
+
             switch (lastToken)
             {
-                case TokenKind.FifteenStars:
+                case TokenKind.FifteenStars or TokenKind.InlineStartingAt:
                     switch (first)
                     {
                         case 'S':
                             const string StartingPhase = "Starting PHASE";
-                            
+
                             Assert.Equal(start, StartingPhase);
 
-                            kind = TokenKind.StartingTopLevelPhase;
+                            kind = TokenKind.StartingPhase;
                             rawWidth += StartingPhase.Length + 1;
 
                             goto ParsePhase;
                         case 'F':
                             const string FinishingPhase = "Finishing PHASE";
-                            
+
                             Assert.Equal(start, FinishingPhase);
 
-                            kind = TokenKind.FinishingTopLevelPhase;
+                            kind = TokenKind.FinishingPhase;
                             rawWidth += FinishingPhase.Length + 1;
 
                         ParsePhase:
                             var phase = ParseRyuJitPhase(start + rawWidth, out var phaseWidth);
                             rawWidth += phaseWidth;
-                            rawValue = (uint)phase;
+                            rawValue = (int)phase;
                             break;
                         case 'I':
                             switch (start[2])
@@ -123,14 +146,126 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     var function = ParseRyuJitFunction(start + rawWidth, out var functionWidth);
 
                                     rawWidth += functionWidth;
-                                    (kind, rawValue) = (TokenKind.Function, (uint)function);
+                                    (kind, rawValue) = (TokenKind.StartingFunction, (int)function);
                                     break;
-                                default: goto ReturnUnknown;
+                                default:
+                                    switch (start[7])
+                                    {
+                                        case '@':
+                                            const string Inline = "Inline @[";
+
+                                            Assert.Equal(start, Inline);
+
+                                            rawWidth += Inline.Length;
+                                            var inlineStart = IntegersParser.ParseIntegerSixDigits(start + rawWidth);
+
+                                            rawWidth += "000000]".Length;
+                                            (kind, rawValue) = (TokenKind.InlineStartingAt, inlineStart);
+                                            break;
+                                        case 'T':
+                                            const string InlineTree = "Inline Tree";
+
+                                            Assert.Equal(start, InlineTree);
+
+                                            rawWidth += InlineTree.Length;
+                                            kind = TokenKind.InlineTreeHeader;
+                                            break;
+                                        default: Assert.Impossible(start); goto ReturnUnknown;
+                                    }
+                                    break;
                             }
                             break;
                         default: goto ReturnUnknown;
                     }
                     break;
+                case TokenKind.BasicBlockNumberColumnHeader:
+                    switch (first)
+                    {
+                        case 'B':
+                            Assert.Equal(start, "BBid");
+                            (kind, rawWidth) = (TokenKind.BasicBlockIdColumnHeader, "BBid".Length);
+                            break;
+                        case 'R':
+                            Assert.Equal(start, "Reachable by");
+                            (kind, rawWidth) = (TokenKind.ReachabilitySetsHeader, "Reachable by".Length);
+                            break;
+                        case 'D':
+                            Assert.Equal(start, "Dominated by");
+                            (kind, rawWidth) = (TokenKind.DominatorSetsHeader, "Dominated by".Length);
+                            break;
+                        default: Assert.Impossible(start); goto ReturnUnknown;
+                    }
+                    break;
+                case TokenKind.BasicBlockIdColumnHeader:
+                    Assert.Equal(start, "ref");
+                    (kind, rawWidth) = (TokenKind.RefColumnHeader, "ref".Length);
+                    break;
+                case TokenKind.RefColumnHeader:
+                    Assert.Equal(start, "try");
+                    (kind, rawWidth) = (TokenKind.TryColumnHeader, "try".Length);
+                    break;
+                case TokenKind.TryColumnHeader:
+                    Assert.Equal(start, "hnd");
+                    (kind, rawWidth) = (TokenKind.HandleColumnHeader, "hnd".Length);
+                    break;
+                case TokenKind.HandleColumnHeader:
+                    // We normalize the table by adding missing columns
+                    kind = TokenKind.PredsColumnHeader;
+                    switch (first)
+                    {
+                        case 'p':
+                            Assert.Equal(start, "preds");
+                            rawWidth = "preds".Length;
+                            break;
+                        default:
+                            rawWidth = 0;
+                            break;
+                    }
+                    break;
+                case TokenKind.PredsColumnHeader:
+                    Assert.Equal(start, "weight");
+                    (kind, rawWidth) = (TokenKind.WeightColumnHeader, "weight".Length);
+                    break;
+                case TokenKind.WeightColumnHeader:
+                    Assert.Equal(start, "lp [IL range]");
+                    (kind, rawWidth) = (TokenKind.ILRangeColumnHeader, "lp [IL range]".Length);
+                    break;
+                case TokenKind.ILRangeColumnHeader:
+                    Assert.Equal(start, "[jump]");
+                    (kind, rawWidth) = (TokenKind.JumpColumnHeader, "[jump]".Length);
+                    break;
+                case TokenKind.JumpColumnHeader:
+                    Assert.Equal(start, "[EH region]");
+                    (kind, rawWidth) = (TokenKind.ExceptionHandlingColumnHeader, "[EH region]".Length);
+                    break;
+                case TokenKind.ExceptionHandlingColumnHeader:
+                    Assert.Equal(start, "[flags]");
+                    (kind, rawWidth) = (TokenKind.FlagsColumnHeader, "[flags]".Length);
+                    break;
+                case TokenKind.FlagsColumnHeader:
+                    Assert.Equal(start, Token.OneHundredAndThirySevenLines);
+                    kind = TokenKind.BasicBlockTableCenter;
+                    rawWidth = Token.OneHundredAndThirySevenLines.Length;
+                    break;
+                case TokenKind.BasicBlockTableCenter:
+                    kind = TokenKind.BasicBlockInTable;
+                    goto ReturnAnyBasicBlock;
+                case TokenKind.BasicBlockInTable:
+                    kind = TokenKind.BasicBlockIdInTable;
+                    rawWidth = "[0000]".Length;
+                    rawValue = IntegersParser.ParseIntegerFourDigits(start + "[".Length);
+                    break;
+                case TokenKind.BasicBlockIdInTable:
+                    kind = TokenKind.BasicBlockRefCountInTable;
+                    rawValue = IntegersParser.ParseGenericInteger(start, out var refCountWidth);
+                    rawWidth = refCountWidth;
+                    break;
+                case TokenKind.FourStars:
+                    kind = TokenKind.BasicBlockInInnerHeader;
+                    goto ReturnAnyBasicBlock;
+                case TokenKind.TwelveDashes when first is 'B':
+                    kind = TokenKind.BasicBlockInTopHeader;
+                    goto ReturnAnyBasicBlock;
                 default:
                     switch (first)
                     {
@@ -150,8 +285,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         case '|': (kind, rawWidth) = (TokenKind.Pipe, 1); break;
                         case '"': (kind, rawWidth) = (TokenKind.DoubleQuote, 1); break;
                         case ',': (kind, rawWidth) = (TokenKind.Comma, 1); break;
-                        case '\r': (kind, rawWidth) = (TokenKind.EndOfLine, 2); break;
-                        case '\n': (kind, rawWidth) = (TokenKind.EndOfLine, 1); break;
                         case '#': (kind, rawWidth) = (TokenKind.Hash, 1); break;
                         case '?': (kind, rawWidth) = (TokenKind.QuestionMark, 1); break;
                         case '.':
@@ -159,7 +292,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             {
                                 case 3: (kind, rawWidth) = (TokenKind.ThreeDots, 3); break;
                                 case 2: (kind, rawWidth) = (TokenKind.TwoDots, 2); break;
-                                default: (kind, rawWidth) = (TokenKind.Dot, 1); break;
+                                case 1: (kind, rawWidth) = (TokenKind.Dot, 1); break;
+                                default: goto ReturnUnknown;
                             }
                             break;
                         case '*':
@@ -168,14 +302,23 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 case 15: (kind, rawWidth) = (TokenKind.FifteenStars, 15); break;
                                 case 4: (kind, rawWidth) = (TokenKind.FourStars, 4); break;
                                 case 6: (kind, rawWidth) = (TokenKind.SixStars, 6); break;
-                                default: (kind, rawWidth) = (TokenKind.Star, 1); break;
+                                case 1: (kind, rawWidth) = (TokenKind.Star, 1); break;
+                                default: goto ReturnUnknown;
                             }
                             break;
-                        case '-' when Count.OfLeading(start, end, '-') == 137: (kind, rawWidth) = (TokenKind.LineOfOneHundredAndThirtySevenDashes, 137); break;
+                        case '-':
+                            switch (Count.OfLeading(start, end, '-'))
+                            {
+                                case 12: (kind, rawWidth) = (TokenKind.TwelveDashes, 12); break;
+                                case 48: (kind, rawWidth) = (TokenKind.FourtyEightDashes, 48); break;
+                                case 137: (kind, rawWidth) = (TokenKind.LineOfOneHundredAndThirtySevenDashes, 137); break;
+                                default: goto ReturnUnknown;
+                            }
+                            break;
                         // All integers in the dump start with characters 0 through 9
                         case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9':
                             kind = TokenKind.Integer;
-                            rawValue = (uint)IntegersParser.ParseGenericInteger(start, out rawWidth);
+                            rawValue = IntegersParser.ParseGenericInteger(start, out rawWidth);
                             break;
                         case 'B':
                             switch (start[1])
@@ -184,10 +327,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     switch (start[2])
                                     {
                                         // BBnum
-                                        case 'n': (kind, rawWidth) = (TokenKind.BasicBlockNumberColumnHeader, 5); break;
-                                        // BBid
-                                        case 'i': (kind, rawWidth) = (TokenKind.BasicBlockIdColumnHeader, 4); break;
+                                        case 'n': (kind, rawWidth) = (TokenKind.BasicBlockNumberColumnHeader, "BBnum".Length); break;
                                         // In fgDebugCheckBBlist, BBJ_ALWAYS, BBJ_NONE, RefTypeBB, <some> BB
+                                        // BBid should be hadnled in the "after BBnum" code
                                         case 'l' or 'J' or ' ': goto ReturnUnknown;
                                         // BBXX
                                         default:
@@ -195,12 +337,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             {
                                                 // Name in register allocation table
                                                 case ' ': goto ReturnUnknown;
-                                                default:
-                                                    (kind, rawWidth) = (TokenKind.BasicBlock, 4);
-                                                    rawValue = (uint)IntegersParser.ParseIntegerTwoDigits(start + "BB".Length);
-                                                    break;
+                                                default: kind = TokenKind.BasicBlock; goto ReturnAnyBasicBlock;
                                             }
-                                            break;
                                     }
                                     break;
                                 default: goto ReturnUnknown;
@@ -209,12 +347,18 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         default: goto ReturnUnknown;
                     }
                     break;
+                ReturnAnyBasicBlock:
+                    Assert.Equal(start, "BB");
+                    var dbg = new string(start, 0, 10);
+                    rawValue = IntegersParser.ParseIntegerTwoDigits(start + 2);
+                    rawWidth += 4;
+                    break;
                 ReturnUnknown:
                     (kind, rawWidth) = (TokenKind.Unknown, 1); break;
             }
 
-            width = padding + rawWidth;
-            return new(kind, rawValue);
+            finalWidth += rawWidth;
+            return new(kind, (uint)rawValue);
         }
 
         private static RyuJitPhase ParseRyuJitPhase(char* start, out nint width)

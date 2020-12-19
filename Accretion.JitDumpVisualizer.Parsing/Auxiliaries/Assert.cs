@@ -15,5 +15,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
             var actual = new string(start, 0, expected.Length);
             True(actual == expected, $"Unexpected string '{actual}'. Expected: '{expected}'");
         }
+
+        [Conditional(DebugMode)]
+        public static unsafe void Impossible(char* start)
+        {
+            var actual = new string(start, 0, 100);
+            Debug.Fail($"{actual} is impossible.");
+        }
     }
 }

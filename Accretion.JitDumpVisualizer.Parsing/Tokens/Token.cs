@@ -5,6 +5,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal readonly struct Token : IEquatable<Token>
     {
+        public const string OneHundredAndThirySevenLines = "-----------------------------------------------------------------------------------------------------------------------------------------";
+
         // This ensures things stay in registers but pays for that in constructor size
         private readonly ulong _token;
 
@@ -25,9 +27,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var stringification = $"{Kind}";
             object? value = Kind switch
             {
-                TokenKind.Integer or TokenKind.BasicBlock or TokenKind.Statement => RawValue,
-                TokenKind.StartingTopLevelPhase or TokenKind.FinishingTopLevelPhase => (RyuJitPhase)RawValue,
-                TokenKind.Function => (RyuJitFunction)RawValue,
+                TokenKind.Integer or
+                TokenKind.BasicBlock or
+                TokenKind.BasicBlockInTable or
+                TokenKind.BasicBlockInInnerHeader or
+                TokenKind.BasicBlockInTopHeader or
+                TokenKind.Statement or
+                TokenKind.BasicBlockRefCountInTable => RawValue,
+                TokenKind.StartingPhase or TokenKind.FinishingPhase => (RyuJitPhase)RawValue,
+                TokenKind.StartingFunction => (RyuJitFunction)RawValue,
+                TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 _ => null
             };
             if (value is not null)

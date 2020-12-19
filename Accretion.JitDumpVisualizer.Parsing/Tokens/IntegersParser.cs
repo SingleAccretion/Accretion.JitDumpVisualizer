@@ -87,7 +87,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
             return ParseGenericInteger(start, out _);
         }
-
+        
         public static int ParseIntegerFiveDigits(char* start)
         {
             VerifyAll(start, 5);
@@ -99,6 +99,22 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var d5 = start[4] - '0';
 
             return d1 * 10_000 + d2 * 1000 + d3 * 100 + d4 * 10 + d5;
+        }
+
+        public static int ParseIntegerSixDigits(char* start)
+        {
+            VerifyAll(start, 6);
+
+            VerifyAll(start, 5);
+
+            var d1 = start[0] - '0';
+            var d2 = start[1] - '0';
+            var d3 = start[2] - '0';
+            var d4 = start[3] - '0';
+            var d5 = start[4] - '0';
+            var d6 = start[5] - '0';
+
+            return d1 * 100_000 + d2 * 10_000 + d3 * 1000 + d4 * 100 + d5 + d4 * 10 + d6;
         }
 
         [Conditional("DEBUG")]
