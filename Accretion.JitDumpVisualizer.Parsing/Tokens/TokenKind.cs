@@ -85,10 +85,14 @@
         BasicBlockSuccInTopHeader,
         StatementILRangeStart,
         StatementILRangeEnd,
-        Node,
-        NodeLeftValue,
-        NodeRightValue,
-        NodeValue,
-        NodeFlags
+        GenTreeLIRNode,
+        GenTreeNodeEstimatedTime,
+        GenTreeNodeEstimatedCost,
+        GenTreeNodeId,
+        GenTreeNodeFlags,
+        GenTreeNode,
+        GenTreeJunction,
+        GenTreeVerticalLink,
+        GenTreeAngleLink
     }
 }

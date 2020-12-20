@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
-    internal unsafe struct TokenStream
+    internal unsafe partial struct TokenStream
     {
         private static readonly List<object> _gcRoots = new List<object>();
 
@@ -490,7 +490,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     {
                         case 'N':
                             Assert.FormatEqual(start, "N000");
-                            kind = TokenKind.Node;
+                            kind = TokenKind.GenTreeLIRNode;
                             rawValue = IntegersParser.ParseIntegerThreeDigits(start + "N".Length);
                             rawWidth = "N000".Length;
                             break;
@@ -498,30 +498,56 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                     break;
 
-                case TokenKind.Node:
+                case TokenKind.GenTreeLIRNode:
                     Assert.FormatEqual(start, "(000,", valid: ' ');
-                    kind = TokenKind.NodeLeftValue;
+                    kind = TokenKind.GenTreeNodeEstimatedTime;
                     rawValue = IntegersParser.ParseGenericInteger(start + "(".Length, out _);
                     rawWidth = "(000,".Length;
                     break;
 
-                case TokenKind.NodeLeftValue:
-                    kind = TokenKind.NodeRightValue;
+                case TokenKind.GenTreeNodeEstimatedTime:
+                    kind = TokenKind.GenTreeNodeEstimatedCost;
                     rawValue = IntegersParser.ParseGenericInteger(start, out var leftValueWidth);
                     rawWidth = leftValueWidth + ")".Length;
                     break;
 
-                case TokenKind.NodeRightValue:
+                case TokenKind.GenTreeNodeEstimatedCost:
                     Assert.FormatEqual(start, "[000000]");
-                    kind = TokenKind.NodeValue;
+                    kind = TokenKind.GenTreeNodeId;
                     rawValue = IntegersParser.ParseIntegerSixDigits(start + "[".Length);
                     rawWidth = "[000000]".Length;
                     break;
 
-                case TokenKind.NodeValue:
-                    kind = TokenKind.NodeFlags;
-                    rawValue = (int)ParseNodeFlags(start);
+                case TokenKind.GenTreeNodeId:
+                    kind = TokenKind.GenTreeNodeFlags;
+                    rawValue = (int)ParseGenTreeNodeFlags(start);
                     rawWidth = "------------".Length;
+                    break;
+
+                case TokenKind.GenTreeNodeFlags:
+                    switch (start[0])
+                    {
+                        case '*':
+                            Assert.Equal(start, "*  ");
+                            kind = TokenKind.GenTreeNode;
+                            rawWidth = "*  ".Length;
+                            rawValue = (int)ParseGenTreeNodeKind(start + rawWidth, out var genTreeNodeKindWidth);
+                            rawWidth += genTreeNodeKindWidth;
+                            break;
+                        case '+':
+                            kind = TokenKind.GenTreeJunction;
+                            rawWidth = "+".Length;
+                            break;
+                        case '|':
+                            kind = TokenKind.GenTreeVerticalLink;
+                            rawWidth = "|".Length;
+                            break;
+                        case '\\':
+                            kind = TokenKind.GenTreeAngleLink;
+                            rawWidth = "\\".Length;
+                            break;
+                        default: Assert.Impossible(start); goto ReturnUnknown;
+                    }
                     break;
                 #endregion
 
@@ -1061,63 +1087,63 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
         }
 
-        private static NodeFlags ParseNodeFlags(char* start)
+        private static GenTreeNodeFlags ParseGenTreeNodeFlags(char* start)
         {
-            var flags = NodeFlags.None;
+            var flags = GenTreeNodeFlags.None;
 
             switch (start[0])
             {
-                case 'I': flags |= NodeFlags.I; break;
-                case 'H': flags |= NodeFlags.H; break;
-                case '#': flags |= NodeFlags.Hash; break;
-                case 'D': flags |= NodeFlags.D; break;
-                case 'n': flags |= NodeFlags.n; break;
-                case 'J': flags |= NodeFlags.J; break;
-                case '*': flags |= NodeFlags.Star; break;
+                case 'I': flags |= GenTreeNodeFlags.I; break;
+                case 'H': flags |= GenTreeNodeFlags.H; break;
+                case '#': flags |= GenTreeNodeFlags.Hash; break;
+                case 'D': flags |= GenTreeNodeFlags.D; break;
+                case 'n': flags |= GenTreeNodeFlags.n; break;
+                case 'J': flags |= GenTreeNodeFlags.J; break;
+                case '*': flags |= GenTreeNodeFlags.Star; break;
                 default: Assert.Equal(start, "-"); break;
             }
             switch (start[1])
             {
-                case 'A': flags |= NodeFlags.A; break;
-                case 'c': flags |= NodeFlags.c; break;
+                case 'A': flags |= GenTreeNodeFlags.A; break;
+                case 'c': flags |= GenTreeNodeFlags.c; break;
                 default: Assert.Equal(start + 1, "-"); break;
             }
             switch (start[2])
             {
-                case 'C': flags |= NodeFlags.C; break;
+                case 'C': flags |= GenTreeNodeFlags.C; break;
                 default: Assert.Equal(start + 2, "-"); break;
             }
             switch (start[3])
             {
-                case 'X': flags |= NodeFlags.X; break;
+                case 'X': flags |= GenTreeNodeFlags.X; break;
                 default: Assert.Equal(start + 3, "-"); break;
             }
             switch (start[4])
             {
-                case 'G': flags |= NodeFlags.G; break;
+                case 'G': flags |= GenTreeNodeFlags.G; break;
                 default: Assert.Equal(start + 4, "-"); break;
             }
             switch (start[5])
             {
-                case 'O': flags |= NodeFlags.O; break;
-                case '+': flags |= NodeFlags.Plus; break;
+                case 'O': flags |= GenTreeNodeFlags.O; break;
+                case '+': flags |= GenTreeNodeFlags.Plus; break;
                 default: Assert.Equal(start + 5, "-"); break;
             }
             Assert.Equal(start + 6, "-");
             switch (start[7])
             {
-                case 'N': flags |= NodeFlags.N; break;
+                case 'N': flags |= GenTreeNodeFlags.N; break;
                 default: Assert.Equal(start + 7, "-"); break;
             }
             switch (start[8])
             {
-                case 'R': flags |= NodeFlags.R; break;
+                case 'R': flags |= GenTreeNodeFlags.R; break;
                 default: Assert.Equal(start + 8, "-"); break;
             }
             Assert.Equal(start + 9, "-");
             switch (start[10])
             {
-                case 'L': flags |= NodeFlags.L; break;
+                case 'L': flags |= GenTreeNodeFlags.L; break;
                 default: Assert.Equal(start + 10, "-"); break;
             }
             Assert.Equal(start + 11, "-");

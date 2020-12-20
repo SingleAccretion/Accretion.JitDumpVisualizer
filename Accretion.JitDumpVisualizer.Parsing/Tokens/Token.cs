@@ -38,16 +38,17 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.BasicBlockRefCountInTable or
                 TokenKind.BasicBlockTryCountInTable or
                 TokenKind.BasicBlockHandleCountInTable or
-                TokenKind.NodeLeftValue or
-                TokenKind.NodeRightValue or 
-                TokenKind.NodeValue => RawValue,
+                TokenKind.GenTreeNodeEstimatedTime or
+                TokenKind.GenTreeNodeEstimatedCost or 
+                TokenKind.GenTreeNodeId => RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
                 TokenKind.BasicBlockJumpTargetKindInTable or 
                 TokenKind.BasicBlockJumpTargetKindInTopHeader => (BasicBlockJumpTargetKind)RawValue,
                 TokenKind.BasicBlockFlagInTable => (BasicBlockFlag)RawValue,
                 TokenKind.StartingPhase or TokenKind.FinishingPhase => (RyuJitPhase)RawValue,
                 TokenKind.StartingFunction => (RyuJitFunction)RawValue,
-                TokenKind.NodeFlags => (NodeFlags)RawValue,
+                TokenKind.GenTreeNodeFlags => (GenTreeNodeFlags)RawValue,
+                TokenKind.GenTreeNode => (GenTreeNodeKind)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 TokenKind.BasicBlockILRangeStartInTable or
                 TokenKind.BasicBlockILRangeStartInTopHeader or

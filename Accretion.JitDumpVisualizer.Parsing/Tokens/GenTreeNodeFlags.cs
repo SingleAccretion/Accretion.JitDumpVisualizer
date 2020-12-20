@@ -3,7 +3,7 @@
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     [Flags]
-    public enum NodeFlags
+    public enum GenTreeNodeFlags
     {
         None = 0b0,
         // First flag
