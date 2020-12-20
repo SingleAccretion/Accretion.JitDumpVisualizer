@@ -7,7 +7,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
         public const string DebugMode = "DEBUG";
 
         [Conditional(DebugMode)]
-        public static void True(bool condition, string? message = null) => System.Diagnostics.Debug.Assert(condition, message);
+        public static void True(bool condition, string? message = null) => Debug.Assert(condition, message);
 
         [Conditional(DebugMode)]
         public static unsafe void Equal(char* start, string expected, string? message = null)
@@ -19,7 +19,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
         [Conditional(DebugMode)]
         public static unsafe void Impossible(char* start)
         {
-            var actual = new string(start, 0, 100);
+            // Avoid going out of bounds
+            var i = 0;
+            while (start[i] is not '\0' && i < 100)
+            {
+                i++;
+            }
+
+            var actual = new string(start, 0, i);
             Debug.Fail($"{actual} is impossible.");
         }
     }

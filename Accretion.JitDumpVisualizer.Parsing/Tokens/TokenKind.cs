@@ -27,7 +27,7 @@
         Dot,
         TwoDots,
         ThreeDots,
-        LineOfOneHundredAndThirtySevenDashes,
+        OneHundredAndThirtySevenDashes,
         Pipe,
         BasicBlock,
         BasicBlockNumberColumnHeader,
@@ -65,6 +65,19 @@
         PredsColumnHeader,
         ReachabilitySetsHeader,
         FourtyEightDashes,
-        DominatorSetsHeader
+        DominatorSetsHeader,
+        BasicBlockTryCountInTable,
+        BasicBlockHandleCountInTable,
+        BasicBlockPredInTable,
+        BasicBlockWeightInTable,
+        SeventyFiveStars,
+        BasicBlockILRangeStartInTable,
+        BasicBlockILRangeEndInTable,
+        BasicBlockJumpTargetInTable,
+        BasicBlockJumpTargetKindInTable,
+        BasicBlockReturnInTable,
+        BasicBlockFlagInTable,
+        BasicBlockRowEndInTable,
+        BasicBlockTableFooter
     }
 }

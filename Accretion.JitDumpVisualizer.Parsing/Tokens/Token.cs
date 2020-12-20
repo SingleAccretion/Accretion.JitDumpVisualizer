@@ -5,7 +5,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal readonly struct Token : IEquatable<Token>
     {
-        public const string OneHundredAndThirySevenLines = "-----------------------------------------------------------------------------------------------------------------------------------------";
+        public const string OneHundredAndThirySevenDashes = "-----------------------------------------------------------------------------------------------------------------------------------------";
 
         // This ensures things stay in registers but pays for that in constructor size
         private readonly ulong _token;
@@ -20,7 +20,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         public Token(TokenKind kind, uint rawValue) => _token = (ulong)rawValue << 32 | (ulong)kind;
 
         public TokenKind Kind => (TokenKind)_token;
-        private ulong RawValue => _token >> 32;
+        private uint RawValue => (uint)(_token >> 32);
 
         public override string? ToString()
         {
@@ -32,11 +32,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.BasicBlockInTable or
                 TokenKind.BasicBlockInInnerHeader or
                 TokenKind.BasicBlockInTopHeader or
+                TokenKind.BasicBlockPredInTable or
+                TokenKind.BasicBlockJumpTargetInTable or
                 TokenKind.Statement or
-                TokenKind.BasicBlockRefCountInTable => RawValue,
+                TokenKind.BasicBlockRefCountInTable or
+                TokenKind.BasicBlockTryCountInTable or
+                TokenKind.BasicBlockHandleCountInTable => RawValue,
+                TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
+                TokenKind.BasicBlockReturnInTable => "(return)",
+                TokenKind.BasicBlockJumpTargetKindInTable => (BasicBlockJumpTargetKind)RawValue,
+                TokenKind.BasicBlockFlagInTable => (BasicBlockFlag)RawValue,
                 TokenKind.StartingPhase or TokenKind.FinishingPhase => (RyuJitPhase)RawValue,
                 TokenKind.StartingFunction => (RyuJitFunction)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
+                TokenKind.BasicBlockILRangeStartInTable => $"[{((int)RawValue < 0 ? "???" : $"{RawValue:000}")}",
+                TokenKind.BasicBlockILRangeEndInTable => $"{((int)RawValue < 0 ? "???" : $"{RawValue:000}")})",
                 _ => null
             };
             if (value is not null)
@@ -72,7 +82,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             TokenKind.Dot => 1,
             TokenKind.TwoDots => 2,
             TokenKind.ThreeDots => 3,
-            TokenKind.LineOfOneHundredAndThirtySevenDashes => 137,
+            TokenKind.OneHundredAndThirtySevenDashes => 137,
             TokenKind.EndOfLine => 1,
             TokenKind.EndOfFile => 0,
             _ => throw new ArgumentOutOfRangeException($"Token of kind {kind} has no constant width.")

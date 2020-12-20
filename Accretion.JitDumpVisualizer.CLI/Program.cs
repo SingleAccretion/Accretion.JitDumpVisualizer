@@ -149,7 +149,5 @@ namespace Accretion.JitDumpVisualizer.CLI
             Console.WriteLine($"Total: {totalCount,40}");
             Console.WriteLine();
         }
-
-
     }
 }

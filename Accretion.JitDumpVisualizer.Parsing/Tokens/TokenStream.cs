@@ -76,17 +76,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             Assert.True(end - start >= 0, "No peeking outside the bounds.");
             Assert.True(*end is '\0', "The source buffer must be alive.");
 
-            nint padding = 0;
+            finalWidth = 0;
             while (*start is ' ' or '\t'
 #if RELEASE
                 or '\r' or '\n'
 #endif
                 )
             {
-                padding++;
+                finalWidth++;
                 start++;
             }
-            finalWidth = padding;
 
             TokenKind kind;
             nint rawWidth = 0;
@@ -113,22 +112,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     switch (first)
                     {
                         case 'S':
-                            const string StartingPhase = "Starting PHASE";
-
-                            Assert.Equal(start, StartingPhase);
-
+                            Assert.Equal(start, "Starting PHASE");
                             kind = TokenKind.StartingPhase;
-                            rawWidth += StartingPhase.Length + 1;
-
+                            rawWidth = "Starting PHASE ".Length;
                             goto ParsePhase;
                         case 'F':
-                            const string FinishingPhase = "Finishing PHASE";
-
-                            Assert.Equal(start, FinishingPhase);
-
+                            Assert.Equal(start, "Finishing PHASE");
                             kind = TokenKind.FinishingPhase;
-                            rawWidth += FinishingPhase.Length + 1;
-
+                            rawWidth = "Finishing PHASE ".Length;
                         ParsePhase:
                             var phase = ParseRyuJitPhase(start + rawWidth, out var phaseWidth);
                             rawWidth += phaseWidth;
@@ -138,13 +129,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             switch (start[2])
                             {
                                 case ' ':
-                                    const string In = "In";
-
-                                    Assert.Equal(start, In);
-
-                                    rawWidth += In.Length + 1;
+                                    Assert.Equal(start, "In");
+                                    rawWidth = "In ".Length;
                                     var function = ParseRyuJitFunction(start + rawWidth, out var functionWidth);
-
                                     rawWidth += functionWidth;
                                     (kind, rawValue) = (TokenKind.StartingFunction, (int)function);
                                     break;
@@ -152,22 +139,15 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     switch (start[7])
                                     {
                                         case '@':
-                                            const string Inline = "Inline @[";
-
-                                            Assert.Equal(start, Inline);
-
-                                            rawWidth += Inline.Length;
+                                            Assert.Equal(start, "Inline @[");
+                                            rawWidth = "Inline @[".Length;
                                             var inlineStart = IntegersParser.ParseIntegerSixDigits(start + rawWidth);
-
                                             rawWidth += "000000]".Length;
                                             (kind, rawValue) = (TokenKind.InlineStartingAt, inlineStart);
                                             break;
                                         case 'T':
-                                            const string InlineTree = "Inline Tree";
-
-                                            Assert.Equal(start, InlineTree);
-
-                                            rawWidth += InlineTree.Length;
+                                            Assert.Equal(start, "Inline Tree");
+                                            rawWidth = "Inline Tree".Length;
                                             kind = TokenKind.InlineTreeHeader;
                                             break;
                                         default: Assert.Impossible(start); goto ReturnUnknown;
@@ -243,11 +223,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     (kind, rawWidth) = (TokenKind.FlagsColumnHeader, "[flags]".Length);
                     break;
                 case TokenKind.FlagsColumnHeader:
-                    Assert.Equal(start, Token.OneHundredAndThirySevenLines);
+                    Assert.Equal(start, Token.OneHundredAndThirySevenDashes);
                     kind = TokenKind.BasicBlockTableCenter;
-                    rawWidth = Token.OneHundredAndThirySevenLines.Length;
+                    rawWidth = Token.OneHundredAndThirySevenDashes.Length;
                     break;
-                case TokenKind.BasicBlockTableCenter:
+                case TokenKind.BasicBlockTableCenter or TokenKind.BasicBlockRowEndInTable:
                     kind = TokenKind.BasicBlockInTable;
                     goto ReturnAnyBasicBlock;
                 case TokenKind.BasicBlockInTable:
@@ -259,6 +239,90 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     kind = TokenKind.BasicBlockRefCountInTable;
                     rawValue = IntegersParser.ParseGenericInteger(start, out var refCountWidth);
                     rawWidth = refCountWidth;
+                    break;
+                case TokenKind.BasicBlockRefCountInTable:
+                    kind = TokenKind.BasicBlockTryCountInTable;
+                    rawWidth = 0;
+                    break;
+                case TokenKind.BasicBlockTryCountInTable:
+                    kind = TokenKind.BasicBlockHandleCountInTable;
+                    rawWidth = 0;
+                    break;
+                case TokenKind.BasicBlockHandleCountInTable:
+                    switch (first)
+                    {
+                        case 'B':
+                            kind = TokenKind.BasicBlockPredInTable;
+                            goto ReturnAnyBasicBlock;
+                        default: goto ReturnBasicBlockWeightInTable;
+                    }
+                case TokenKind.BasicBlockPredInTable:
+                    switch (first)
+                    {
+                        case ',':
+                            start++;
+                            rawWidth++;
+                            kind = TokenKind.BasicBlockPredInTable;
+                            goto ReturnAnyBasicBlock;
+                        default: goto ReturnBasicBlockWeightInTable;
+                    }
+                ReturnBasicBlockWeightInTable:
+                    kind = TokenKind.BasicBlockWeightInTable;
+                    rawValue = BitConverter.SingleToInt32Bits(IntegersParser.ParseGenericFloat(start, out var weightWidth));
+                    rawWidth = weightWidth;
+                    break;
+                case TokenKind.BasicBlockWeightInTable:
+                    Assert.Equal(start + "[000".Length, "..");
+                    kind = TokenKind.BasicBlockILRangeStartInTable;
+                    rawValue = ParseILRangeInTable(start + "[".Length);
+                    rawWidth = "[000..".Length;
+                    break;
+                case TokenKind.BasicBlockILRangeStartInTable:
+                    Assert.Equal(start + 3, ")");
+                    kind = TokenKind.BasicBlockILRangeEndInTable;
+                    rawValue = ParseILRangeInTable(start);
+                    rawWidth = "000)".Length;
+                    break;
+                case TokenKind.BasicBlockILRangeEndInTable:
+                    switch (first)
+                    {
+                        case '-':
+                            kind = TokenKind.BasicBlockJumpTargetInTable;
+                            start += "-> ".Length;
+                            rawWidth += "-> ".Length;
+                            goto ReturnAnyBasicBlock;
+                        case '(':
+                            Assert.Equal(start, "(return)");
+                            kind = TokenKind.BasicBlockReturnInTable;
+                            rawWidth = "(return)".Length;
+                            break;
+                        default: goto HandleBasicBlockRowEndInTable;
+                    }
+                    break;
+                case TokenKind.BasicBlockJumpTargetInTable:
+                    kind = TokenKind.BasicBlockJumpTargetKindInTable;
+                    rawValue = (int)ParseBasicBlockJumpTargetKind(start, out var jumpKindWidth);
+                    rawWidth = jumpKindWidth;
+                    break;
+                case TokenKind.BasicBlockJumpTargetKindInTable or TokenKind.BasicBlockReturnInTable or TokenKind.BasicBlockFlagInTable:
+                HandleBasicBlockRowEndInTable:
+                    switch (first)
+                    {
+                        case 'B':
+                            kind = TokenKind.BasicBlockRowEndInTable;
+                            rawWidth = 0;
+                            break;
+                        case '-':
+                            Assert.Equal(start, Token.OneHundredAndThirySevenDashes);
+                            kind = TokenKind.BasicBlockTableFooter;
+                            rawWidth = Token.OneHundredAndThirySevenDashes.Length;
+                            break;
+                        default:
+                            kind = TokenKind.BasicBlockFlagInTable;
+                            rawValue = (int)ParseBasicBlockFlag(start, out var flagWidth);
+                            rawWidth = flagWidth;
+                            break;
+                    }
                     break;
                 case TokenKind.FourStars:
                     kind = TokenKind.BasicBlockInInnerHeader;
@@ -299,6 +363,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         case '*':
                             switch (Count.OfLeading(start, end, '*'))
                             {
+                                case 75: (kind, rawWidth) = (TokenKind.SeventyFiveStars, 75); break;
                                 case 15: (kind, rawWidth) = (TokenKind.FifteenStars, 15); break;
                                 case 4: (kind, rawWidth) = (TokenKind.FourStars, 4); break;
                                 case 6: (kind, rawWidth) = (TokenKind.SixStars, 6); break;
@@ -309,9 +374,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         case '-':
                             switch (Count.OfLeading(start, end, '-'))
                             {
-                                case 12: (kind, rawWidth) = (TokenKind.TwelveDashes, 12); break;
+                                case 137: (kind, rawWidth) = (TokenKind.OneHundredAndThirtySevenDashes, 137); break;
                                 case 48: (kind, rawWidth) = (TokenKind.FourtyEightDashes, 48); break;
-                                case 137: (kind, rawWidth) = (TokenKind.LineOfOneHundredAndThirtySevenDashes, 137); break;
+                                case 12: (kind, rawWidth) = (TokenKind.TwelveDashes, 12); break;
                                 default: goto ReturnUnknown;
                             }
                             break;
@@ -349,9 +414,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     break;
                 ReturnAnyBasicBlock:
                     Assert.Equal(start, "BB");
-                    var dbg = new string(start, 0, 10);
-                    rawValue = IntegersParser.ParseIntegerTwoDigits(start + 2);
-                    rawWidth += 4;
+                    rawValue = IntegersParser.ParseIntegerTwoDigits(start + "BB".Length);
+                    rawWidth += "BB00".Length;
                     break;
                 ReturnUnknown:
                     (kind, rawWidth) = (TokenKind.Unknown, 1); break;
@@ -695,6 +759,119 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
 
             return function;
+        }
+
+        private static BasicBlockJumpTargetKind ParseBasicBlockJumpTargetKind(char* start, out nint width)
+        {
+            width = "(always)".Length;
+            BasicBlockJumpTargetKind kind;
+            switch (start[2])
+            {
+                case 'c':
+                    Assert.Equal(start, "( cond )");
+                    kind = BasicBlockJumpTargetKind.Conditional;
+                    break;
+                case 'l':
+                    Assert.Equal(start, "(always)");
+                    kind = BasicBlockJumpTargetKind.Always;
+                    break;
+                default:
+                    kind = BasicBlockJumpTargetKind.Unknown;
+                    width = 1;
+                    break;
+            }
+
+            return kind;
+        }
+
+        private static BasicBlockFlag ParseBasicBlockFlag(char* start, out nint width)
+        {
+            BasicBlockFlag flag;
+            switch (*start)
+            {
+                case 'i':
+                    switch (start[1])
+                    {
+                        case 'd':
+                            Assert.Equal(start, "idxlen");
+                            flag = BasicBlockFlag.IdxLen;
+                            width = "idxlen".Length;
+                            break;
+                        case 'n':
+                            Assert.Equal(start, "internal");
+                            flag = BasicBlockFlag.Internal;
+                            width = "internal".Length;
+                            break;
+                        case ' ':
+                            Assert.Equal(start, "i");
+                            flag = BasicBlockFlag.I;
+                            width = "i".Length;
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'l':
+                    Assert.Equal(start, "label");
+                    flag = BasicBlockFlag.Label;
+                    width = "label".Length;
+                    break;
+                case 't':
+                    Assert.Equal(start, "target");
+                    flag = BasicBlockFlag.Target;
+                    width = "target".Length;
+                    break;
+                case 'h':
+                    Assert.Equal(start, "hascall");
+                    flag = BasicBlockFlag.HasCall;
+                    width = "hascall".Length;
+                    break;
+                case 'n':
+                    switch (start[1])
+                    {
+                        case 'e':
+                            Assert.Equal(start, "newobj");
+                            flag = BasicBlockFlag.NewObj;
+                            width = "newobj".Length;
+                            break;
+                        case 'u':
+                            Assert.Equal(start, "nullcheck");
+                            flag = BasicBlockFlag.NullCheck;
+                            width = "nullcheck".Length;
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'g':
+                    Assert.Equal(start, "gcsafe");
+                    flag = BasicBlockFlag.GCSafe;
+                    width = "gcsafe".Length;
+                    break;
+                case 'L':
+                    Assert.Equal(start, "LIR");
+                    flag = BasicBlockFlag.LIR;
+                    width = "LIR".Length;
+                    break;
+                default:
+                ReturnUnknown:
+                    Assert.Impossible(start);
+                    flag = BasicBlockFlag.Unknown;
+                    width = 1;
+                    break;
+            }
+
+            return flag;
+        }
+
+        private static int ParseILRangeInTable(char* start)
+        {
+            switch (*start)
+            {
+                case '?':
+                    Assert.Equal(start, "???");
+                    return -1;
+                default:
+                    return IntegersParser.ParseHexIntegerThreeDigits(start);
+            }
         }
     }
 }
