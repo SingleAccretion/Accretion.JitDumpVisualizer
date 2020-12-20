@@ -5,5 +5,6 @@
         Unknown,
         Conditional,
         Always,
+        Return
     }
 }

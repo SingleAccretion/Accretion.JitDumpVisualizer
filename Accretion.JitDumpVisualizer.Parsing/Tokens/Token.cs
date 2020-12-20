@@ -28,25 +28,33 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             object? value = Kind switch
             {
                 TokenKind.Integer or
-                TokenKind.BasicBlock or
                 TokenKind.BasicBlockInTable or
                 TokenKind.BasicBlockInInnerHeader or
                 TokenKind.BasicBlockInTopHeader or
                 TokenKind.BasicBlockPredInTable or
                 TokenKind.BasicBlockJumpTargetInTable or
+                TokenKind.BasicBlockJumpTargetInTopHeader or
                 TokenKind.Statement or
                 TokenKind.BasicBlockRefCountInTable or
                 TokenKind.BasicBlockTryCountInTable or
-                TokenKind.BasicBlockHandleCountInTable => RawValue,
+                TokenKind.BasicBlockHandleCountInTable or
+                TokenKind.NodeLeftValue or
+                TokenKind.NodeRightValue or 
+                TokenKind.NodeValue => RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
-                TokenKind.BasicBlockReturnInTable => "(return)",
-                TokenKind.BasicBlockJumpTargetKindInTable => (BasicBlockJumpTargetKind)RawValue,
+                TokenKind.BasicBlockJumpTargetKindInTable or 
+                TokenKind.BasicBlockJumpTargetKindInTopHeader => (BasicBlockJumpTargetKind)RawValue,
                 TokenKind.BasicBlockFlagInTable => (BasicBlockFlag)RawValue,
                 TokenKind.StartingPhase or TokenKind.FinishingPhase => (RyuJitPhase)RawValue,
                 TokenKind.StartingFunction => (RyuJitFunction)RawValue,
+                TokenKind.NodeFlags => (NodeFlags)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
-                TokenKind.BasicBlockILRangeStartInTable => $"[{((int)RawValue < 0 ? "???" : $"{RawValue:000}")}",
-                TokenKind.BasicBlockILRangeEndInTable => $"{((int)RawValue < 0 ? "???" : $"{RawValue:000}")})",
+                TokenKind.BasicBlockILRangeStartInTable or
+                TokenKind.BasicBlockILRangeStartInTopHeader or
+                TokenKind.StatementILRangeStart or
+                TokenKind.BasicBlockILRangeEndInTable or
+                TokenKind.BasicBlockILRangeEndInTopHeader or
+                TokenKind.StatementILRangeEnd => $"{((int)RawValue < 0 ? "???" : $"{RawValue:000}")}",
                 _ => null
             };
             if (value is not null)
@@ -82,7 +90,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             TokenKind.Dot => 1,
             TokenKind.TwoDots => 2,
             TokenKind.ThreeDots => 3,
-            TokenKind.OneHundredAndThirtySevenDashes => 137,
+            TokenKind.BasicBlockTableHeader => 137,
             TokenKind.EndOfLine => 1,
             TokenKind.EndOfFile => 0,
             _ => throw new ArgumentOutOfRangeException($"Token of kind {kind} has no constant width.")

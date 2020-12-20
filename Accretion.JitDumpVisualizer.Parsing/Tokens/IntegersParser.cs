@@ -8,10 +8,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal static unsafe class IntegersParser
     {
-        public static int ParseGenericInteger(char* start, out nint digitCount)
+        public static int ParseGenericInteger(char* start, out nint width)
         {
-            digitCount = 0;
+            var originalStart = start;
+            var digitCount = 0;
             var value = 0;
+
+            while (*start is ' ')
+            {
+                start++;
+            }
 
             const int MaxDigitCount = 17;
             // Largest numbers in the dump have 17 digits (including the leading zero in "0x")
@@ -51,6 +57,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             multiplier *= integerBase;
                         }
 
+                        width = (nint)(start - originalStart);
                         return value;
                 }
 
