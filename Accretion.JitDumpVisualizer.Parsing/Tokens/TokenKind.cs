@@ -90,9 +90,11 @@
         GenTreeNodeEstimatedCost,
         GenTreeNodeId,
         GenTreeNodeFlags,
-        GenTreeNode,
+        GenTreeNodeKind,
         GenTreeJunction,
         GenTreeVerticalLink,
-        GenTreeAngleLink
+        GenTreeAngleLink,
+        GenTreeNodeType,
+        GenTreeNodeExactType
     }
 }

@@ -107,7 +107,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
             switch (lastToken)
             {
-                // Handling of starting and finsihing phases
+                #region Handling of starting and finishing phases
                 case TokenKind.FifteenStars or TokenKind.InlineStartingAt:
                     switch (start[0])
                     {
@@ -170,6 +170,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         default: goto ReturnUnknown;
                     }
                     break;
+                #endregion
 
                 #region Handling of basic block table
                 case TokenKind.BasicBlockTableHeader:
@@ -430,6 +431,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                 #endregion
 
+                #region Shared labels for basic block table and detalization header
                 ReturnTwoDotILRangeStart:
                     Assert.FormatEqual(start, "[000", hex: true, valid: '?');
                     rawValue = ParseILRange(start + "[".Length);
@@ -452,6 +454,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     rawValue = (int)ParseBasicBlockJumpTargetKind(start, out var jumpKindWidth);
                     rawWidth = jumpKindWidth;
                     break;
+                #endregion
 
                 #region Handling of basic block detalization
                 case TokenKind.FourStars:
@@ -529,7 +532,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     {
                         case '*':
                             Assert.Equal(start, "*  ");
-                            kind = TokenKind.GenTreeNode;
+                            kind = TokenKind.GenTreeNodeKind;
                             rawWidth = "*  ".Length;
                             rawValue = (int)ParseGenTreeNodeKind(start + rawWidth, out var genTreeNodeKindWidth);
                             rawWidth += genTreeNodeKindWidth;
@@ -550,6 +553,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                     break;
 
+                case TokenKind.GenTreeNodeKind:
+                    kind = TokenKind.GenTreeNodeType;
+                    rawValue = (int)ParseGenTreeNodeType(start, out rawWidth);
+                    break;
+
+                case TokenKind.GenTreeNodeType:
+                    switch (start[0])
+                    {
+                        case '<':
+                            kind = TokenKind.GenTreeNodeExactType;
+                            rawValue = ParseGenTreeNodeExactType(start, out rawWidth);
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
                 // case TokenKind.GenTreeNodeType:
                 #endregion
 
@@ -629,7 +647,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         }
 
         // Parsing methods in this file save on machine code size in switches by packing the information
-        // This is in the following general format (measured to save about up to ~25% in code size as compared to the naive approach):
+        // This is in the following general format (measured to save about up to ~15% in code size as compared to the naive approach):
         // ulong result = [...[Width][Enum]]
         // Tight packing ensures nothing is wasted on encoding the constants in assembly
         // Further savings could be achieved by returning "result" directly in (on x64) "rax"
@@ -1466,6 +1484,146 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             Assert.Equal(start + 11, "-");
 
             return flags;
+
+        }
+
+        private static GenTreeNodeType ParseGenTreeNodeType(char* start, out int width)
+        {
+            Assert.True(Unsafe.SizeOf<GenTreeNodeType>() is 1);
+
+            ulong result;
+            switch (start[0])
+            {
+                case '<':
+                    Assert.Equal(start, "<UNDEF>");
+                    result = (ulong)GenTreeNodeType.Undefined | ((ulong)"<UNDEF>".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                case 'b':
+                    switch (start[2])
+                    {
+                        case 'k':
+                            Assert.Equal(start, "blk");
+                            result = (ulong)GenTreeNodeType.Blk | ((ulong)"blk".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'o':
+                            Assert.Equal(start, "bool");
+                            result = (ulong)GenTreeNodeType.Bool | ((ulong)"bool".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'r':
+                            Assert.Equal(start, "byref");
+                            result = (ulong)GenTreeNodeType.Byref | ((ulong)"byref".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 't':
+                            Assert.Equal(start, "byte");
+                            result = (ulong)GenTreeNodeType.Byte | ((ulong)"byte".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'd':
+                    Assert.Equal(start, "double");
+                    result = (ulong)GenTreeNodeType.Double | ((ulong)"double".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                case 'f':
+                    Assert.Equal(start, "float");
+                    result = (ulong)GenTreeNodeType.Float | ((ulong)"float".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                case 'i':
+                    Assert.Equal(start, "int");
+                    result = (ulong)GenTreeNodeType.Int | ((ulong)"int".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                case 'l':
+                    switch (start[1])
+                    {
+                        case 'c':
+                            Assert.Equal(start, "lclBlk");
+                            result = (ulong)GenTreeNodeType.LclBlk | ((ulong)"lclBlk".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'o':
+                            Assert.Equal(start, "long");
+                            result = (ulong)GenTreeNodeType.Long | ((ulong)"long".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'r':
+                    Assert.Equal(start, "ref");
+                    result = (ulong)GenTreeNodeType.Ref | ((ulong)"ref".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                case 's':
+                    switch (start[4])
+                    {
+                        case 't':
+                            Assert.Equal(start, "short");
+                            result = (ulong)GenTreeNodeType.Short | ((ulong)"short".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case '1':
+                            switch (start[5])
+                            {
+                                case '2':
+                                    Assert.Equal(start, "simd12");
+                                    result = (ulong)GenTreeNodeType.Simd12 | ((ulong)"simd12".Length << (sizeof(GenTreeNodeType) * 8));
+                                    break;
+                                case '6':
+                                    Assert.Equal(start, "simd16");
+                                    result = (ulong)GenTreeNodeType.Simd16 | ((ulong)"simd16".Length << (sizeof(GenTreeNodeType) * 8));
+                                    break;
+                                default: goto ReturnUnknown;
+                            }
+                            break;
+                        case '3':
+                            Assert.Equal(start, "simd32");
+                            result = (ulong)GenTreeNodeType.Simd32 | ((ulong)"simd32".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case '8':
+                            Assert.Equal(start, "simd8");
+                            result = (ulong)GenTreeNodeType.Simd8 | ((ulong)"simd8".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'c':
+                            Assert.Equal(start, "struct");
+                            result = (ulong)GenTreeNodeType.Struct | ((ulong)"struct".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'u':
+                    switch (start[1])
+                    {
+                        case 'b':
+                            Assert.Equal(start, "ubyte");
+                            result = (ulong)GenTreeNodeType.UByte | ((ulong)"ubyte".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'i':
+                            Assert.Equal(start, "uint");
+                            result = (ulong)GenTreeNodeType.UInt | ((ulong)"uint".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 'l':
+                            Assert.Equal(start, "ulong");
+                            result = (ulong)GenTreeNodeType.ULong | ((ulong)"ulong".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        case 's':
+                            Assert.Equal(start, "ushort");
+                            result = (ulong)GenTreeNodeType.UShort | ((ulong)"ushort".Length << (sizeof(GenTreeNodeType) * 8));
+                            break;
+                        default: goto ReturnUnknown;
+                    }
+                    break;
+                case 'v':
+                    Assert.Equal(start, "void");
+                    result = (ulong)GenTreeNodeType.Void | ((ulong)"void".Length << (sizeof(GenTreeNodeType) * 8));
+                    break;
+                default:
+                ReturnUnknown:
+                    result = (ulong)GenTreeNodeType.Unknown | (1 << (sizeof(GenTreeNodeType) * 8));
+                    break;
+            }
+
+            width = (int)(result >> (sizeof(GenTreeNodeType) * 8));
+            return (GenTreeNodeType)result;
+        }
+
+        private static GenTreeNodeExactTypeHandle ParseGenTreeNodeType(char* start, out int width)
+        {
 
         }
     }

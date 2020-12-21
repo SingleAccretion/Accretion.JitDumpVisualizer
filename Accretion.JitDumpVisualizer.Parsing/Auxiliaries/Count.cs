@@ -8,6 +8,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
     {
         public static unsafe nint OfLeading(char* start, char* end, char character)
         {
+            // Note: the expectation is that most counts will be less than 16
+            // However, there are cases (and they show up in profiles) where that is not true and the much slower is used for a long chain
+            // There is a need for an investigation here
+            // The best solution would be solve it semantically, so there is no need for lookahead at all
             if ((nint)end - (nint)start >= 2 * Vector128<byte>.Count && Sse2.IsSupported)
             {
                 var ptr = (ushort*)start;
@@ -29,21 +33,15 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
                 }
             }
 
-            return OfLeadingSoftwareFallback(start, end, character);
+            return OfLeadingSoftwareFallback(start, character);
         }
 
-        private static unsafe nint OfLeadingSoftwareFallback(char* start, char* end, char character)
+        private static unsafe nint OfLeadingSoftwareFallback(char* start, char character)
         {
             nint count = 0;
-            while (start < end)
+            while (start[count] != character)
             {
-                if (*start != character)
-                {
-                    return count;
-                }
-
                 count++;
-                start++;
             }
 
             return count;

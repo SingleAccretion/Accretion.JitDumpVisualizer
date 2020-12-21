@@ -44,7 +44,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.StartingPhase or TokenKind.FinishingPhase => (RyuJitPhase)RawValue,
                 TokenKind.StartingFunction => (RyuJitFunction)RawValue,
                 TokenKind.GenTreeNodeFlags => (GenTreeNodeFlags)RawValue,
-                TokenKind.GenTreeNode => (GenTreeNodeKind)RawValue,
+                TokenKind.GenTreeNodeKind => (GenTreeNodeKind)RawValue,
+                TokenKind.GenTreeNodeType => (GenTreeNodeType)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 TokenKind.BasicBlockILRangeStartInTable or
                 TokenKind.BasicBlockILRangeStartInTopHeader or
