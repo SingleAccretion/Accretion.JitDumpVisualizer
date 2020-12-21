@@ -1,6 +1,6 @@
 ﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    public enum GenTreeNodeKind
+    public enum GenTreeNodeKind : byte
     {
         Unknown,
         ADD,

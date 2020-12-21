@@ -8,7 +8,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     internal static unsafe class IntegersParser
     {
-        public static int ParseGenericInteger(char* start, out nint width)
+        public static int ParseGenericInteger(char* start, out int width)
         {
             var originalStart = start;
             var digitCount = 0;
@@ -57,7 +57,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             multiplier *= integerBase;
                         }
 
-                        width = (nint)(start - originalStart);
+                        width = (int)(start - originalStart);
                         return value;
                 }
 
@@ -71,7 +71,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
         }
 
-        public static float ParseGenericFloat(char* start, out nint digitCount)
+        public static float ParseGenericFloat(char* start, out int digitCount)
         {
             digitCount = 0;
             bool isFraction = false;

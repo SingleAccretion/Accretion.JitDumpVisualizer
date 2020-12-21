@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    public enum RyuJitFunction
+    public enum RyuJitFunction : byte
     {
         Unknown,
         CompInitDebuggingInfo,

@@ -1,6 +1,6 @@
 ﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    public enum BasicBlockJumpTargetKind
+    public enum BasicBlockJumpTargetKind : byte
     {
         Unknown,
         Conditional,
