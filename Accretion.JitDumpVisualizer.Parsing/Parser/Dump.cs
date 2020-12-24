@@ -7,10 +7,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Parser
     public sealed class Dump : DumpSection
     {
         private static readonly Token[] _phaseStart = new Token[] { new(TokenKind.StartingPhase) };
-        private static readonly Token[] _phaseStartEnd = new Token[] { new(TokenKind.EndOfLine), new(TokenKind.OpenParen) };
+        private static readonly Token[] _phaseStartEnd = new Token[] {  };
 
         private static readonly Token[] _phaseEnd = new Token[] { new(TokenKind.FifteenStars), new(TokenKind.FinishingPhase) };
-        private static readonly Token[] _noChanges = new Token[] { new(TokenKind.OpenBracket) };
+        private static readonly Token[] _noChanges = new Token[] {  };
 
         private ReadOnlyArray<CompilationPhase>? _phases;
 

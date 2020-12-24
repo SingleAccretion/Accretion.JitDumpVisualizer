@@ -184,15 +184,18 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     {
                         case 'B':
                             Assert.Equal(start, "BBid");
-                            (kind, rawWidth) = (TokenKind.BasicBlockIdColumnHeader, "BBid".Length);
+                            kind = TokenKind.BasicBlockIdColumnHeader;
+                            rawWidth = "BBid".Length;
                             break;
                         case 'R':
                             Assert.Equal(start, "Reachable by");
-                            (kind, rawWidth) = (TokenKind.ReachabilitySetsHeader, "Reachable by".Length);
+                            kind = TokenKind.ReachabilitySetsHeader;
+                            rawWidth = "Reachable by".Length;
                             break;
                         case 'D':
                             Assert.Equal(start, "Dominated by");
-                            (kind, rawWidth) = (TokenKind.DominatorSetsHeader, "Dominated by".Length);
+                            kind = TokenKind.DominatorSetsHeader;
+                            rawWidth = "Dominated by".Length;
                             break;
                         default: Assert.Impossible(start); goto ReturnUnknown;
                     }
@@ -200,17 +203,20 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
                 case TokenKind.BasicBlockIdColumnHeader:
                     Assert.Equal(start, "ref");
-                    (kind, rawWidth) = (TokenKind.RefColumnHeader, "ref".Length);
+                    kind = TokenKind.RefColumnHeader;
+                    rawWidth = "ref".Length;
                     break;
 
                 case TokenKind.RefColumnHeader:
                     Assert.Equal(start, "try");
-                    (kind, rawWidth) = (TokenKind.TryColumnHeader, "try".Length);
+                    kind = TokenKind.TryColumnHeader;
+                    rawWidth = "try".Length;
                     break;
 
                 case TokenKind.TryColumnHeader:
                     Assert.Equal(start, "hnd");
-                    (kind, rawWidth) = (TokenKind.HandleColumnHeader, "hnd".Length);
+                    kind = TokenKind.HandleColumnHeader;
+                    rawWidth = "hnd".Length;
                     break;
 
                 case TokenKind.HandleColumnHeader:
@@ -230,27 +236,32 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
                 case TokenKind.PredsColumnHeader:
                     Assert.Equal(start, "weight");
-                    (kind, rawWidth) = (TokenKind.WeightColumnHeader, "weight".Length);
+                    kind = TokenKind.WeightColumnHeader;
+                    rawWidth = "weight".Length;
                     break;
 
                 case TokenKind.WeightColumnHeader:
                     Assert.Equal(start, "lp [IL range]");
-                    (kind, rawWidth) = (TokenKind.ILRangeColumnHeader, "lp [IL range]".Length);
+                    kind = TokenKind.ILRangeColumnHeader;
+                    rawWidth = "lp [IL range]".Length;
                     break;
 
                 case TokenKind.ILRangeColumnHeader:
                     Assert.Equal(start, "[jump]");
-                    (kind, rawWidth) = (TokenKind.JumpColumnHeader, "[jump]".Length);
+                    kind = TokenKind.JumpColumnHeader;
+                    rawWidth = "[jump]".Length;
                     break;
 
                 case TokenKind.JumpColumnHeader:
                     Assert.Equal(start, "[EH region]");
-                    (kind, rawWidth) = (TokenKind.ExceptionHandlingColumnHeader, "[EH region]".Length);
+                    kind = TokenKind.ExceptionHandlingColumnHeader;
+                    rawWidth = "[EH region]".Length;
                     break;
 
                 case TokenKind.ExceptionHandlingColumnHeader:
                     Assert.Equal(start, "[flags]");
-                    (kind, rawWidth) = (TokenKind.FlagsColumnHeader, "[flags]".Length);
+                    kind = TokenKind.FlagsColumnHeader;
+                    rawWidth = "[flags]".Length;
                     break;
 
                 case TokenKind.FlagsColumnHeader:
@@ -563,12 +574,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     {
                         case '<':
                             kind = TokenKind.GenTreeNodeExactType;
-                            rawValue = ParseGenTreeNodeExactType(start, out rawWidth);
+                            rawValue = ParseGenTreeNodeExactType(start, out rawWidth).Value;
                             break;
                         default: goto ReturnUnknown;
                     }
                     break;
-                // case TokenKind.GenTreeNodeType:
                 #endregion
 
                 #region Handling of unstructured data
@@ -576,23 +586,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     switch (start[0])
                     {
                         case '\0': (kind, rawWidth) = (TokenKind.EndOfFile, 0); break;
-                        case '[': (kind, rawWidth) = (TokenKind.OpenBracket, 1); break;
-                        case ']': (kind, rawWidth) = (TokenKind.CloseBracket, 1); break;
-                        case '{': (kind, rawWidth) = (TokenKind.OpenCurly, 1); break;
-                        case '}': (kind, rawWidth) = (TokenKind.CloseCurly, 1); break;
-                        case '(': (kind, rawWidth) = (TokenKind.OpenParen, 1); break;
-                        case ')': (kind, rawWidth) = (TokenKind.CloseParen, 1); break;
-                        case '<': (kind, rawWidth) = (TokenKind.LessThan, 1); break;
-                        case '>': (kind, rawWidth) = (TokenKind.GreaterThan, 1); break;
-                        case ':': (kind, rawWidth) = (TokenKind.Colon, 1); break;
-                        case ';': (kind, rawWidth) = (TokenKind.Semicolon, 1); break;
-                        case '=': (kind, rawWidth) = (TokenKind.EqualsSign, 1); break;
-                        case '\'': (kind, rawWidth) = (TokenKind.SingleQuote, 1); break;
-                        case '|': (kind, rawWidth) = (TokenKind.Pipe, 1); break;
-                        case '"': (kind, rawWidth) = (TokenKind.DoubleQuote, 1); break;
-                        case ',': (kind, rawWidth) = (TokenKind.Comma, 1); break;
-                        case '#': (kind, rawWidth) = (TokenKind.Hash, 1); break;
-                        case '?': (kind, rawWidth) = (TokenKind.QuestionMark, 1); break;
                         case '.':
                             switch (Count.OfLeading(start, end, '.'))
                             {
@@ -623,11 +616,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 default: goto ReturnUnknown;
                             }
                             break;
-                        // All integers in the dump start with characters 0 through 9
-                        case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9':
-                            kind = TokenKind.Integer;
-                            rawValue = IntegersParser.ParseGenericInteger(start, out rawWidth);
-                            break;
                         default: goto ReturnUnknown;
                     }
                     break;
@@ -650,7 +638,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         // This is in the following general format (measured to save about up to ~15% in code size as compared to the naive approach):
         // ulong result = [...[Width][Enum]]
         // Tight packing ensures nothing is wasted on encoding the constants in assembly
-        // Further savings could be achieved by returning "result" directly in (on x64) "rax"
+        // Further savings could be achieved by returning "result" directly
         // Instead of using "out int width"
         // I am not prepared to go that far yet
 
@@ -1622,9 +1610,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return (GenTreeNodeType)result;
         }
 
-        private static GenTreeNodeExactTypeHandle ParseGenTreeNodeType(char* start, out int width)
+        private static GenTreeNodeExactTypeHandle ParseGenTreeNodeExactType(char* start, out int width)
         {
+            var index = new Span<char>(start, int.MaxValue).IndexOf('>');
+            width = index + ">".Length;
 
+            // We do not yet have an implementation for string pools
+            return new GenTreeNodeExactTypeHandle(0);
         }
     }
 }

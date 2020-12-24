@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Accretion.JitDumpVisualizer.CLI
 {
@@ -18,33 +19,12 @@ namespace Accretion.JitDumpVisualizer.CLI
             BenchmarkRunner.Run<TokenStreamBenchmarks>();
             return;
 #endif
-            // 
             // MeasureNextThroughput();
             // return;
             // 
             // CollectDumpStats();
             // return;
             var rawDump = File.ReadAllText("dump.txt");
-           
-            // var list = new List<string>();
-            // foreach (var line in rawDump.Split("\r\n").Where(x => x.Contains("*************** In ")))
-            // {
-            //     var index = line.IndexOf("*************** In ") + "*************** In ".Length;
-            //     var lastIndex = line.IndexOf(')');
-            //     if (lastIndex < 0)
-            //     {
-            //         lastIndex = line.Length - 1;
-            //     }
-            //     var phaseName = line[index..(lastIndex + 1)].Trim();
-            //     list.Add(phaseName);
-            // }
-            // 
-            // list = list.Distinct().OrderBy(x => x).ToList();
-            // for (int i = 0; i < list.Count; i++)
-            // {
-            //     Console.WriteLine(list[i]);
-            // }
-            // return;
 
             using var sw = new StreamWriter("output.txt");
             var dump = new Dump(rawDump);
@@ -67,26 +47,34 @@ namespace Accretion.JitDumpVisualizer.CLI
         {
             var rawDump = new StreamReader("dump.txt").ReadToEnd();
             var count = 0;
-            var avg = 0L;
+            double avg = 0L;
             fixed (char* start = rawDump)
             {
+                Thread.CurrentThread.Priority = ThreadPriority.Highest;
                 while (true)
                 {
-                    var tokens = new TokenStream(start, rawDump.Length);
-
                     var watch = Stopwatch.StartNew();
-                    var n = 0;
-                    while (tokens.Next().Kind != TokenKind.EndOfFile)
+                    long n = 0;
+                    const int Multiplier = 10;
+                    for (int i = 0; i < Multiplier; i++)
                     {
-                        n++;
+                        var tokens = new TokenStream(start, rawDump.Length);
+                        while (tokens.Next().Kind != TokenKind.EndOfFile)
+                        {
+                            n++;
+                        }
                     }
                     watch.Stop();
+                    var elapsed = (double)watch.ElapsedMilliseconds;
+
+                    n /= Multiplier;
+                    elapsed /= Multiplier;
                     count++;
 
                     Console.SetCursorPosition(0, 0);
-                    Console.WriteLine($"It took {watch.ElapsedMilliseconds} ms to process {n} tokens.");
+                    Console.WriteLine($"It took {elapsed:0.00} ms to process {n} tokens.");
 
-                    var throughput = n / watch.ElapsedMilliseconds;
+                    var throughput = n / elapsed;
                     avg = ((count - 1) * avg + throughput) / count;
                     var nsPerToken = 1000_000d / avg;
 
@@ -136,6 +124,29 @@ namespace Accretion.JitDumpVisualizer.CLI
             }
 
             DisplayStats(charStats);
+        }
+
+        private static void CollectTypesInDumpStats()
+        {
+            var types = new List<string>();
+            foreach (var rawDump in Directory.EnumerateFiles("Dumps", "*").Select(x => File.ReadAllText(x)))
+            {
+                var span = rawDump.AsSpan();
+                while (span.IndexOf("struct<") is > 0 and var start)
+                {
+                    span = span.Slice(start + "struct<".Length);
+                    var end = span.IndexOf('>');
+
+                    types.Add(span[..end].ToString());
+                }
+            }
+
+            types = types.Distinct().OrderBy(x => x.Length).ToList();
+             
+            foreach (var type in types)
+            {
+                Console.WriteLine(type.Length);
+            }
         }
 
         private static void DisplayStats<T>(Dictionary<T, long> stats)

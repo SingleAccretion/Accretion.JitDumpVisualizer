@@ -17,6 +17,5 @@
       <PublishArtifact Include="$(PublishDir)*" />
     </ItemGroup>
     <Copy SourceFiles="@(PublishArtifact)" DestinationFolder="$(OutputPath)\..\Disasmo" />
-    <Message Text="Copied @(PublishArtifact)" Importance="High" />
   </Target>
 </Project>
