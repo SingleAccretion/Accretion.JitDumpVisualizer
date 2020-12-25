@@ -36,7 +36,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.BasicBlockSuccInTopHeader or
                 TokenKind.GenTreeNodeEstimatedTime or
                 TokenKind.GenTreeNodeEstimatedCost or
-                TokenKind.GenTreeNodeId => RawValue,
+                TokenKind.GenTreeNodeId or
+                TokenKind.GenTreeNodeVNumber or
+                TokenKind.GenTreeNodeTemporaryNumber or
+                TokenKind.GenTreeNodeArgumentNumber or
+                TokenKind.GenTreeNodeNesting => RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
                 TokenKind.BasicBlockJumpTargetKindInTable or 
                 TokenKind.BasicBlockJumpTargetKindInTopHeader => (BasicBlockJumpTargetKind)RawValue,

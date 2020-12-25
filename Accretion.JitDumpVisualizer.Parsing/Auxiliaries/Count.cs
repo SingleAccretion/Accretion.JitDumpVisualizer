@@ -12,7 +12,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
             // However, there are cases (and they show up in profiles) where that is not true and the much slower is used for a long chain
             // There is a need for an investigation here
             // The best solution would be solve it semantically, so there is no need for lookahead at all
-            if ((nint)end - (nint)start <= 2 * Vector128<byte>.Count && Sse2.IsSupported)
+            if ((nint)end - (nint)start >= 2 * Vector128<byte>.Count && Sse2.IsSupported)
             {
                 var ptr = (ushort*)start;
 

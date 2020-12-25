@@ -10,65 +10,35 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
     {
         public static int ParseGenericInteger(char* start, out int width)
         {
-            var originalStart = start;
-            var digitCount = 0;
-            var value = 0;
-
+            width = 0;
             while (*start is ' ')
             {
                 start++;
+                width++;
             }
 
-            const int MaxDigitCount = 17;
-            // Largest numbers in the dump have 17 digits (including the leading zero in "0x")
-            // We overestimate here for safety
+            nint digitCount = 0;
             var digits = stackalloc int[32];
-
-            var integerBase = 10;
-            while (true)
+            while ((uint)(*start - '0') is <= 9 and var digit)
             {
-                var delta = 0;
-                var ch = *start;
-                switch (ch)
-                {
-                    // This is correct even taking into account the "0x" prefix (as it will be counted as a leading digit)
-                    case '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9':
-                        delta = '0';
-                        break;
-                    case 'a' or 'b' or 'c' or 'd' or 'e' or 'f':
-                        delta = 'a' - 10;
-                        integerBase = 16;
-                        break;
-                    case 'B' or 'C' or 'D' or 'E' or 'F':
-                        delta = 'A' - 10;
-                        integerBase = 16;
-                        break;
-                    case 'x' or 'h':
-                        delta = 0;
-                        integerBase = 16;
-                        break;
-                    default:
-                        Debug.Assert(digitCount <= MaxDigitCount);
-
-                        var multiplier = 1;
-                        for (nint i = digitCount - 1; i >= 0; i--)
-                        {
-                            value += digits[i] * multiplier;
-                            multiplier *= integerBase;
-                        }
-
-                        width = (int)(start - originalStart);
-                        return value;
-                }
-
-                Debug.Assert(digitCount < MaxDigitCount);
-                if (delta != 0)
-                {
-                    digits[digitCount] = ch - delta;
-                    digitCount++;
-                }
+                digits[digitCount] = (int)digit;
+                digitCount++;
+                width++;
                 start++;
             }
+
+            Assert.True(digitCount < 32);
+            Assert.True(digitCount > 0);
+
+            var result = 0;
+            var multiplier = 1;
+            for (nint i = digitCount - 1; i >= 0; i--)
+            {
+                result += digits[i] * multiplier;
+                multiplier *= 10;
+            }
+
+            return result;
         }
 
         public static float ParseGenericFloat(char* start, out int digitCount)
@@ -100,7 +70,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var d1 = start[0] - '0';
             var d2 = start[1] - '0';
 
-            return d2 * 10 + d1;
+            return d1 * 10 + d2;
         }
 
         public static int ParseIntegerThreeDigits(char* start)
@@ -147,8 +117,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             VerifyAllDecimal(start, 6);
 
-            VerifyAllDecimal(start, 5);
-
             var d1 = start[0] - '0';
             var d2 = start[1] - '0';
             var d3 = start[2] - '0';
@@ -156,7 +124,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var d5 = start[4] - '0';
             var d6 = start[5] - '0';
 
-            return d1 * 100_000 + d2 * 10_000 + d3 * 1000 + d4 * 100 + d5 + d4 * 10 + d6;
+            return d1 * 100_000 + d2 * 10_000 + d3 * 1000 + d4 * 100 + d5 * 10 + d6;
         }
 
         internal static int ParseHexIntegerThreeDigits(char* start)
