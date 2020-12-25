@@ -1440,13 +1440,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     Assert.Equal(start, "(return)");
                     result = (ulong)BasicBlockJumpTargetKind.Return | ((ulong)"(return)".Length << (sizeof(BasicBlockJumpTargetKind) * 8));
                     break;
-                case 'o':
+                default:
                     Assert.Equal(start, "(cond)");
                     result = (ulong)BasicBlockJumpTargetKind.Conditional | ((ulong)"(cond)".Length << (sizeof(BasicBlockJumpTargetKind) * 8));
-                    break;
-                default:
-                    Assert.Impossible(start);
-                    result = (ulong)BasicBlockJumpTargetKind.Conditional | ((ulong)1 << (sizeof(BasicBlockJumpTargetKind) * 8));
                     break;
             }
 
@@ -1472,11 +1468,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "internal");
                             result = (ulong)BasicBlockFlag.Internal | ((ulong)"internal".Length << (sizeof(BasicBlockFlag) * 8));
                             break;
-                        case ' ':
+                        default:
                             Assert.Equal(start, "i");
                             result = (ulong)BasicBlockFlag.I | ((ulong)"i".Length << (sizeof(BasicBlockFlag) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'l':
@@ -1498,25 +1493,19 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "newobj");
                             result = (ulong)BasicBlockFlag.NewObj | ((ulong)"newobj".Length << (sizeof(BasicBlockFlag) * 8));
                             break;
-                        case 'u':
+                        default:
                             Assert.Equal(start, "nullcheck");
                             result = (ulong)BasicBlockFlag.NullCheck | ((ulong)"nullcheck".Length << (sizeof(BasicBlockFlag) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'g':
                     Assert.Equal(start, "gcsafe");
                     result = (ulong)BasicBlockFlag.GCSafe | ((ulong)"gcsafe".Length << (sizeof(BasicBlockFlag) * 8));
                     break;
-                case 'L':
+                default:
                     Assert.Equal(start, "LIR");
                     result = (ulong)BasicBlockFlag.LIR | ((ulong)"LIR".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-                default:
-                ReturnUnknown:
-                    Assert.Impossible(start);
-                    result = (ulong)BasicBlockFlag.Unknown | ((ulong)1 << (sizeof(BasicBlockFlag) * 8));
                     break;
             }
 
@@ -1719,18 +1708,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             break;
                     }
                     break;
-                case 'v':
+                default:
                     Assert.Equal(start, "void");
                     result = (ulong)GenTreeNodeType.Void | ((ulong)"void".Length << (sizeof(GenTreeNodeType) * 8));
                     break;
-                default:
-                    result = (ulong)GenTreeNodeType.Unknown | (1 << (sizeof(GenTreeNodeType) * 8));
-                    break;
             }
-
-            var dbg = new string(start, 0, 100);
-            ;
-            Assert.True((GenTreeNodeType)result != GenTreeNodeType.Unknown);
 
             width = (int)(result >> (sizeof(GenTreeNodeType) * 8));
             return (GenTreeNodeType)result;

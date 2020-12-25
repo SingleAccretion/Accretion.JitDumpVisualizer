@@ -29,11 +29,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             Assert.Equal(start, "ADD_HI");
                                             result = (ulong)GenTreeNodeKind.ADD_HI | ((ulong)"ADD_HI".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        case 'L':
+                                        default:
                                             Assert.Equal(start, "ADD_LO");
                                             result = (ulong)GenTreeNodeKind.ADD_LO | ((ulong)"ADD_LO".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        default: Assert.Impossible(start); goto ReturnUnknown;
                                     }
                                     break;
                                 default:
@@ -73,18 +72,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "ARR_LENGTH");
                                     result = (ulong)GenTreeNodeKind.ARR_LENGTH | ((ulong)"ARR_LENGTH".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'F':
+                                default:
                                     Assert.Equal(start, "ARR_OFFSET");
                                     result = (ulong)GenTreeNodeKind.ARR_OFFSET | ((ulong)"ARR_OFFSET".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: Assert.Impossible(start); goto ReturnUnknown;
                             }
                             break;
-                        case 'S':
+                        default:
                             Assert.Equal(start, "ASG");
                             result = (ulong)GenTreeNodeKind.ASG | ((ulong)"ASG".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'B':
@@ -115,11 +112,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        case 'T':
+                        default:
                             Assert.Equal(start, "BT");
                             result = (ulong)GenTreeNodeKind.BT | ((ulong)"BT".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'C':
@@ -136,11 +132,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "CAST");
                                     result = (ulong)GenTreeNodeKind.CAST | ((ulong)"CAST".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'T':
+                                default:
                                     Assert.Equal(start, "CATCH_ARG");
                                     result = (ulong)GenTreeNodeKind.CATCH_ARG | ((ulong)"CATCH_ARG".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'K':
@@ -188,14 +183,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "CNS_LNG");
                                     result = (ulong)GenTreeNodeKind.CNS_LNG | ((ulong)"CNS_LNG".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'S':
+                                default:
                                     Assert.Equal(start, "CNS_STR");
                                     result = (ulong)GenTreeNodeKind.CNS_STR | ((ulong)"CNS_STR".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
-                        case 'O':
+                        default:
                             switch (start[2])
                             {
                                 case 'L':
@@ -206,14 +200,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "COMMA");
                                     result = (ulong)GenTreeNodeKind.COMMA | ((ulong)"COMMA".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'P':
+                                default:
                                     Assert.Equal(start, "COPY");
                                     result = (ulong)GenTreeNodeKind.COPY | ((ulong)"COPY".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'D':
@@ -223,11 +215,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "DIV");
                             result = (ulong)GenTreeNodeKind.DIV | ((ulong)"DIV".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'Y':
+                        default:
                             Assert.Equal(start, "DYN_BLK");
                             result = (ulong)GenTreeNodeKind.DYN_BLK | ((ulong)"DYN_BLK".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'E':
@@ -241,11 +232,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "END_LFIN");
                             result = (ulong)GenTreeNodeKind.END_LFIN | ((ulong)"END_LFIN".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'Q':
+                        default:
                             Assert.Equal(start, "EQ");
                             result = (ulong)GenTreeNodeKind.EQ | ((ulong)"EQ".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'F':
@@ -264,11 +254,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        case 'T':
+                        default:
                             Assert.Equal(start, "FTN_ADDR");
                             result = (ulong)GenTreeNodeKind.FTN_ADDR | ((ulong)"FTN_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'G':
@@ -278,11 +267,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "GE");
                             result = (ulong)GenTreeNodeKind.GE | ((ulong)"GE".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'T':
+                        default:
                             Assert.Equal(start, "GT");
                             result = (ulong)GenTreeNodeKind.GT | ((ulong)"GT".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'H':
@@ -292,11 +280,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "HWINTRINSIC");
                             result = (ulong)GenTreeNodeKind.HWINTRINSIC | ((ulong)"HWINTRINSIC".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case '_':
+                        default:
                             Assert.Equal(start, "HW_INTRINSIC_CHK");
                             result = (ulong)GenTreeNodeKind.HW_INTRINSIC_CHK | ((ulong)"HW_INTRINSIC_CHK".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'I':
@@ -306,7 +293,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "IL_OFFSET");
                             result = (ulong)GenTreeNodeKind.IL_OFFSET | ((ulong)"IL_OFFSET".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'N':
+                        default:
                             switch (start[2])
                             {
                                 case 'D':
@@ -335,14 +322,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "INIT_VAL");
                                     result = (ulong)GenTreeNodeKind.INIT_VAL | ((ulong)"INIT_VAL".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'T':
+                                default:
                                     Assert.Equal(start, "INTRINSIC");
                                     result = (ulong)GenTreeNodeKind.INTRINSIC | ((ulong)"INTRINSIC".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'J':
@@ -355,11 +340,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "JCC");
                                     result = (ulong)GenTreeNodeKind.JCC | ((ulong)"JCC".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'M':
+                                default:
                                     Assert.Equal(start, "JCMP");
                                     result = (ulong)GenTreeNodeKind.JCMP | ((ulong)"JCMP".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'M':
@@ -375,11 +359,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        case 'T':
+                        default:
                             Assert.Equal(start, "JTRUE");
                             result = (ulong)GenTreeNodeKind.JTRUE | ((ulong)"JTRUE".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'K':
@@ -413,7 +396,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             break;
                                     }
                                     break;
-                                case 'V':
+                                default:
                                     switch (start[7])
                                     {
                                         case '_':
@@ -426,7 +409,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             break;
                                     }
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'E':
@@ -453,11 +435,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "LOCKADD");
                                     result = (ulong)GenTreeNodeKind.LOCKADD | ((ulong)"LOCKADD".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'N':
+                                default:
                                     Assert.Equal(start, "LONG");
                                     result = (ulong)GenTreeNodeKind.LONG | ((ulong)"LONG".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'S':
@@ -473,11 +454,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        case 'T':
+                        default:
                             Assert.Equal(start, "LT");
                             result = (ulong)GenTreeNodeKind.LT | ((ulong)"LT".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'M':
@@ -495,7 +475,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "MOD");
                             result = (ulong)GenTreeNodeKind.MOD | ((ulong)"MOD".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'U':
+                        default:
                             switch (start[3])
                             {
                                 case 'H':
@@ -512,7 +492,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'N':
@@ -551,11 +530,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "OBJ");
                             result = (ulong)GenTreeNodeKind.OBJ | ((ulong)"OBJ".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'R':
+                        default:
                             Assert.Equal(start, "OR");
                             result = (ulong)GenTreeNodeKind.OR | ((ulong)"OR".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'P':
@@ -585,18 +563,17 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "PINVOKE_EPILOG");
                                     result = (ulong)GenTreeNodeKind.PINVOKE_EPILOG | ((ulong)"PINVOKE_EPILOG".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'P':
+                                default:
                                     Assert.Equal(start, "PINVOKE_PROLOG");
                                     result = (ulong)GenTreeNodeKind.PINVOKE_PROLOG | ((ulong)"PINVOKE_PROLOG".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'O':
                             Assert.Equal(start, "PROF_HOOK");
                             result = (ulong)GenTreeNodeKind.PROF_HOOK | ((ulong)"PROF_HOOK".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'U':
+                        default:
                             switch (start[8])
                             {
                                 case 'E':
@@ -611,14 +588,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     Assert.Equal(start, "PUTARG_STK");
                                     result = (ulong)GenTreeNodeKind.PUTARG_STK | ((ulong)"PUTARG_STK".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'Y':
+                                default:
                                     Assert.Equal(start, "PUTARG_TYPE");
                                     result = (ulong)GenTreeNodeKind.PUTARG_TYPE | ((ulong)"PUTARG_TYPE".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'Q':
@@ -661,11 +636,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             break;
                                     }
                                     break;
-                                case '_':
+                                default:
                                     Assert.Equal(start, "RET_EXPR");
                                     result = (ulong)GenTreeNodeKind.RET_EXPR | ((ulong)"RET_EXPR".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'R':
@@ -689,11 +663,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "RSZ");
                             result = (ulong)GenTreeNodeKind.RSZ | ((ulong)"RSZ".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'N':
+                        default:
                             Assert.Equal(start, "RUNTIMELOOKUP");
                             result = (ulong)GenTreeNodeKind.RUNTIMELOOKUP | ((ulong)"RUNTIMELOOKUP".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'S':
@@ -746,18 +719,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             Assert.Equal(start, "STORE_LCL_FLD");
                                             result = (ulong)GenTreeNodeKind.STORE_LCL_FLD | ((ulong)"STORE_LCL_FLD".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        case 'V':
+                                        default:
                                             Assert.Equal(start, "STORE_LCL_VAR");
                                             result = (ulong)GenTreeNodeKind.STORE_LCL_VAR | ((ulong)"STORE_LCL_VAR".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        default: goto ReturnUnknown;
                                     }
                                     break;
-                                case 'J':
+                                default:
                                     Assert.Equal(start, "STORE_OBJ");
                                     result = (ulong)GenTreeNodeKind.STORE_OBJ | ((ulong)"STORE_OBJ".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
                         case 'U':
@@ -770,11 +741,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             Assert.Equal(start, "SUB_HI");
                                             result = (ulong)GenTreeNodeKind.SUB_HI | ((ulong)"SUB_HI".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        case 'L':
+                                        default:
                                             Assert.Equal(start, "SUB_LO");
                                             result = (ulong)GenTreeNodeKind.SUB_LO | ((ulong)"SUB_LO".Length << (sizeof(GenTreeNodeKind) * 8));
                                             break;
-                                        default: goto ReturnUnknown;
                                     }
                                     break;
                                 default:
@@ -783,14 +753,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                     break;
                             }
                             break;
-                        case 'W':
+                        default:
                             switch (start[2])
                             {
                                 case 'A':
                                     Assert.Equal(start, "SWAP");
                                     result = (ulong)GenTreeNodeKind.SWAP | ((ulong)"SWAP".Length << (sizeof(GenTreeNodeKind) * 8));
                                     break;
-                                case 'I':
+                                default:
                                     switch (start[6])
                                     {
                                         case '_':
@@ -803,10 +773,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                             break;
                                     }
                                     break;
-                                default: goto ReturnUnknown;
                             }
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'T':
@@ -820,11 +788,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "TEST_NE");
                             result = (ulong)GenTreeNodeKind.TEST_NE | ((ulong)"TEST_NE".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'A':
+                        default:
                             Assert.Equal(start, "TURE_ARG_SPLIT");
                             result = (ulong)GenTreeNodeKind.TURE_ARG_SPLIT | ((ulong)"TURE_ARG_SPLIT".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
                 case 'U':
@@ -834,14 +801,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "UDIV");
                             result = (ulong)GenTreeNodeKind.UDIV | ((ulong)"UDIV".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'M':
+                        default:
                             Assert.Equal(start, "UMOD");
                             result = (ulong)GenTreeNodeKind.UMOD | ((ulong)"UMOD".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
                     break;
-                case 'X':
+                default:
                     switch (start[1])
                     {
                         case 'A':
@@ -852,17 +818,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             Assert.Equal(start, "XCHG");
                             result = (ulong)GenTreeNodeKind.XCHG | ((ulong)"XCHG".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        case 'O':
+                        default:
                             Assert.Equal(start, "XOR");
                             result = (ulong)GenTreeNodeKind.XOR | ((ulong)"XOR".Length << (sizeof(GenTreeNodeKind) * 8));
                             break;
-                        default: goto ReturnUnknown;
                     }
-                    break;
-                default:
-                ReturnUnknown:
-                    Assert.Impossible(start);
-                    result = (ulong)GenTreeNodeKind.Unknown | ((ulong)1 << (sizeof(GenTreeNodeKind) * 8));
                     break;
             }
 
