@@ -83,7 +83,6 @@
         GenTreeNodeDNumber,
         GenTreeNodeUNumber,
         GenTreeNodeNullConstant,
-        GenTreeNodeNesting,
         GenTreeNodeIsInit,
         GenTreeNodeIsCopy,
         GenTreeNodeIsInlineReturn,

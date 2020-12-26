@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <Target Condition="'$(RuntimeIdentifier)' == 'win-x64' AND '$(IsRunningShadowPublish)' != 'true'" Name="CopyToDisasmo" AfterTargets="Build">
-    <Exec Command="dotnet publish -r win-x64 -c $(Configuration) --self-contained true --no-restore --no-build /p:IsRunningShadowPublish=true" />
+    <Exec Command="dotnet publish -r win-x64 -c $(Configuration) --self-contained true --no-build /p:IsRunningShadowPublish=true" />
     
     <ItemGroup>
       <PublishArtifact Include="$(PublishDir)*" />

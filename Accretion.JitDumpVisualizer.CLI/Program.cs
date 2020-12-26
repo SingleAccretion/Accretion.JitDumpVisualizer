@@ -15,12 +15,35 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
+            // const int MB = 3501904;
+            // 
+            // var native = Stopwatch.StartNew();
+            // var a = (byte*)Marshal.AllocHGlobal(MB);
+            // native.Stop();
+            // 
+            // var managed = Stopwatch.StartNew();
+            // var b = GC.AllocateUninitializedArray<byte>(MB);
+            // managed.Stop();
+            // 
+            // Console.WriteLine($"Native: {native.Elapsed.TotalMilliseconds}");
+            // Console.WriteLine($"Managed: {managed.Elapsed.TotalMilliseconds}");
+            // 
+            // while (true)
+            // {
+            //     for (int i = 0; i < MB; i++)
+            //     {
+            //         a[i] += 1;
+            //         b[i] += 1;
+            //     }
+            // }
+            // return;
 #if RELEASE
-            BenchmarkRunner.Run<TokenStreamBenchmarks>();
+            BenchmarkRunner.Run<IndexOfBenchmarks>();
+            return;
+            
+            MeasureNextThroughput();
             return;
 #endif
-            // MeasureNextThroughput();
-            // return;
             // 
             // CollectDumpStats();
             // return;

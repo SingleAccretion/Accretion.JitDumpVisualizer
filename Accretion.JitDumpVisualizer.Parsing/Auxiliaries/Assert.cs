@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 {
-    internal static class Assert
+    internal static unsafe class Assert
     {
         public const string DebugMode = "DEBUG";
 
@@ -13,14 +13,15 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
         public static void True(bool condition, string? message = null) => Debug.Assert(condition, message);
 
         [Conditional(DebugMode)]
-        public static unsafe void Equal(char* start, string expected, string? message = null)
-        {
-            var actual = new string(start, 0, expected.Length);
-            True(actual == expected, $"Unexpected string '{actual}'. Expected: '{expected}'");
-        }
+        public static void NotEqual(char* start, string invalid, string? message = null) =>
+            True(new string(start, 0, invalid.Length) != invalid, $"Unexpected string '{Expand(start)}'.");
 
         [Conditional(DebugMode)]
-        public static unsafe void FormatEqual(char* start, string expected, string? message = null, bool hex = false, char wildcard = '0', params char[] valid)
+        public static void Equal(char* start, string expected, string? message = null) =>
+            True(new string(start, 0, expected.Length) == expected, $"Unexpected string '{Expand(start)}'. Expected: '{expected}'");
+
+        [Conditional(DebugMode)]
+        public static void FormatEqual(char* start, string expected, string? message = null, bool hex = false, char wildcard = '0', params char[] valid)
         {
             var builder = new StringBuilder();
             for (int i = 0; i < expected.Length; i++)
@@ -39,7 +40,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
         }
 
         [Conditional(DebugMode)]
-        public static unsafe void Impossible(char* start)
+        public static void Impossible(char* start) => Debug.Fail($"{Expand(start)} is impossible.");
+
+        private static string Expand(char* start)
         {
             // Avoid going out of bounds
             var i = 0;
@@ -48,8 +51,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
                 i++;
             }
 
-            var actual = new string(start, 0, i);
-            Debug.Fail($"{actual} is impossible.");
+            return new string(start, 0, i);
         }
     }
 }
