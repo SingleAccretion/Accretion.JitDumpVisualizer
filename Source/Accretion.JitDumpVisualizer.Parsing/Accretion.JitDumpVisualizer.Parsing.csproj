@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
+    <None Include="..\..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
   <Target Condition="'$(RuntimeIdentifier)' == 'win-x64' AND '$(IsRunningShadowPublish)' != 'true'" Name="CopyToDisasmo" AfterTargets="Build">
