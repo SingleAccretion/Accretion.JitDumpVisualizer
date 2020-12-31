@@ -1,11 +1,11 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
 using System.Runtime.CompilerServices;
 
-namespace Accretion.JitDumpVisualizer.Parsing.Tokens
+namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
 {
-    internal unsafe partial struct TokenStream
+    internal static unsafe partial class Lexer
     {
-        private static GenTreeNodeKind ParseGenTreeNodeKind(char* start, out int width)
+        public static GenTreeNodeKind ParseGenTreeNodeKind(char* start, out int width)
         {
             Assert.True(Unsafe.SizeOf<GenTreeNodeKind>() is 1);
 

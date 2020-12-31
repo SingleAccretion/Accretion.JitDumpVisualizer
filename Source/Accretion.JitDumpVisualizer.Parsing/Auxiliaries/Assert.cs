@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Accretion.JitDumpVisualizer.Parsing.Tokens;
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -8,6 +10,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
     internal static unsafe class Assert
     {
         public const string DebugMode = "DEBUG";
+        private static readonly StreamWriter _dumper = new StreamWriter("debug.txt");
 
         [Conditional(DebugMode)]
         public static void True(bool condition, string? message = null) => Debug.Assert(condition, message);
@@ -42,6 +45,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
         [Conditional(DebugMode)]
         public static void Impossible(char* start) => Debug.Fail($"{Expand(start)} is impossible.");
 
+        [Conditional(DebugMode)]
+        public static void Dump(Token token)
+        {
+            if (token.Kind == TokenKind.EndOfLine)
+            {
+                _dumper.WriteLine();
+                _dumper.Flush();
+            }
+            else
+            {
+                _dumper.Write(token + " ");
+                _dumper.Flush();
+            }
+        }
+
         private static string Expand(char* start)
         {
             // Avoid going out of bounds
@@ -53,5 +71,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
             return new string(start, 0, i);
         }
+
     }
 }

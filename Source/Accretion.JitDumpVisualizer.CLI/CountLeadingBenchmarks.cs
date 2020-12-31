@@ -23,12 +23,10 @@ namespace Accretion.JitDumpVisualizer.CLI
         {
             fixed (char* start = str)
             {
-                var end = start + str.Length;
-
                 nint sum = 0;
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    sum += Count.OfLeading(start, end, ch);
+                    sum += Count.OfLeading(start, ch);
                 }
 
                 return sum;

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
-namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
+namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries.Logging
 {
     internal static class Logger
     {
@@ -22,6 +23,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
             }
         }
 
-        public static void Log(string message) => _logWriter?.WriteLine(message);
+        [Conditional(Assert.DebugMode)]
+        public static void Log(LoggedEvent loggedEvent) => _logWriter?.WriteLine(loggedEvent.ToString());
+        
+        [Conditional(Assert.DebugMode)]
+        public static void Log<T>(LoggedEvent loggedEvent, T value) => _logWriter?.WriteLine($"{loggedEvent}: {value}");
     }
 }

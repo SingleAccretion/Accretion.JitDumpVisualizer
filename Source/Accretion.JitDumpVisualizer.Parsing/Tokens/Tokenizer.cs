@@ -1,82 +1,90 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
+using Accretion.JitDumpVisualizer.Parsing.Auxiliaries.Logging;
+using Accretion.JitDumpVisualizer.Parsing.IO;
 using Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
     [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Deliberate use of statements for ease of future modification.")]
-    internal unsafe partial struct TokenStream
+    internal unsafe static class Tokenizer
     {
-        private static readonly List<object> _gcRoots = new List<object>();
+        // Empirically determined, intended to be an overstimation
+        private const double TokensPerChar = 1;
+        private const int InputBufferLength = 4 * 1024;
+        private const int InputBufferSafetyPadding = 1 * 1024;
+        private const int LookaheadLimit = 200;
 
-        private readonly char* _end;
-        private char* _start;
-        private TokenKind _lastTokenKind;
-
-        public TokenStream(StringSegment text)
+        public static Token[] Tokenize(string dump)
         {
-            var source = text.AsSpan();
-
-            var pinnedBuffer = GC.AllocateArray<char>(source.Length + 1, pinned: true);
-            source.CopyTo(pinnedBuffer);
-            pinnedBuffer[^1] = '\0';
-            _gcRoots.Add(pinnedBuffer);
-
-            _start = (char*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(pinnedBuffer));
-            _end = _start + source.Length;
-            _lastTokenKind = TokenKind.Unknown;
-
-            Assert.True(source[^1] == *(_end - 1));
-            Assert.True(*_end == '\0', "Pinned buffer must be null-terminated.");
+            throw new NotImplementedException();
         }
 
-        public TokenStream(char* start, nint length)
+        public static Token[] Tokenize(FileReader fileReader)
         {
-            _start = start;
-            _end = _start + length;
-            _lastTokenKind = TokenKind.Unknown;
+            var dumpCharCount = fileReader.Length;
+            Logger.Log(LoggedEvent.DumpFileSize, dumpCharCount);
 
-            Assert.True(*_end is '\0');
-        }
+            var tokenCount = (int)(dumpCharCount * TokensPerChar);
+            Logger.Log(LoggedEvent.EstimatedTokenCount, tokenCount);
+            var tokens = GC.AllocateUninitializedArray<Token>(tokenCount, pinned: true);
 
-        public void Skip(int count)
-        {
-            for (int i = 0; i < count; i++)
+            // We overallocate here to avoid buffer overruns and use lookahead freely
+            // The padding is now limited to 2KB, which should be enough
+            fixed (char* bufferStartPtr = GC.AllocateUninitializedArray<char>(InputBufferLength + InputBufferSafetyPadding))
             {
-                Next();
+                // Clearing only the padding allows us to stay in the managed land
+                new Span<char>(bufferStartPtr + InputBufferLength, InputBufferSafetyPadding).Clear();
+
+                var tokensPtr = (Token*)Unsafe.AsPointer(ref tokens[0]);
+                bool endHasBeenReached = false;
+                var currentPtr = bufferStartPtr + InputBufferLength;
+                while (!endHasBeenReached)
+                {
+                    var remainsFromLastBlock = (int)(InputBufferLength - (currentPtr - bufferStartPtr));
+                    Buffer.MemoryCopy(currentPtr, bufferStartPtr, InputBufferLength, remainsFromLastBlock * sizeof(char));
+
+                    var newBlock = new Span<char>(bufferStartPtr, InputBufferLength);
+                    var remainingNewBlock = newBlock.Slice(remainsFromLastBlock);
+                    var bytesRead = fileReader.ReadBlock(remainingNewBlock);
+                    if (bytesRead < remainingNewBlock.Length)
+                    {
+                        remainingNewBlock.Slice(bytesRead).Clear();
+                        endHasBeenReached = true;
+                    }
+
+                    currentPtr = bufferStartPtr;
+                    NextBlock(ref currentPtr, ref tokensPtr);
+                }
+            }
+
+            return tokens;
+        }
+
+        private static void NextBlock(ref char* start, ref Token* tokens)
+        {
+            var lastTokenKind = tokens[0].Kind != TokenKind.EndOfLine ? tokens[-1].Kind : tokens[-2].Kind;
+            var end = start + InputBufferLength - LookaheadLimit;
+            while (start < end)
+            {
+                var token = Peek(start, lastTokenKind, out var width);
+                *tokens++ = token;
+                start += width;
+
+                Assert.Dump(token);
+
+                if (token.Kind != TokenKind.EndOfLine)
+                {
+                    lastTokenKind = token.Kind;
+                }
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Token Next()
+        private static Token Peek(char* start, TokenKind lastToken, out int finalWidth)
         {
-            var token = Peek(_start, _end, _lastTokenKind, out var width);
-            _start += width;
-            if (token.Kind != TokenKind.EndOfLine)
-            {
-                _lastTokenKind = token.Kind;
-            }
-
-            return token;
-        }
-
-        public TokenSource? NextTokensBeforeAny(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
-
-        public TokenSource? NextTokensBefore(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
-
-        public TokenSource? NextTokensAfter(ReadOnlySpan<Token> tokens) => throw new NotImplementedException();
-
-        public TokenSource NextLine() => throw new NotImplementedException();
-
-        private static Token Peek(char* start, char* end, TokenKind lastToken, out int finalWidth)
-        {
-            Assert.True(end - start >= 0, "No peeking outside the bounds.");
-            Assert.True(*end is '\0', "The source buffer must be alive.");
-
             finalWidth = 0;
             while (*start is ' ' or '\t'
 #if RELEASE
@@ -552,7 +560,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 paddingWidth++;
                             }
                             Assert.Equal(start, "*  ");
-                            rawValue = (int)ParseGenTreeNodeKind(start + "*  ".Length, out rawWidth);
+                            rawValue = (int)Lexer.ParseGenTreeNodeKind(start + "*  ".Length, out rawWidth);
                             rawWidth += paddingWidth + "*  ".Length;
                             break;
                         default:
@@ -707,9 +715,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 default:
                     switch (start[0])
                     {
-                        case '\0': (kind, rawWidth) = (TokenKind.EndOfFile, 0); break;
+                        case '\0': (kind, rawWidth) = (TokenKind.EndOfFile, int.MaxValue); break;
                         case '.':
-                            switch (Count.OfLeading(start, end, '.'))
+                            switch (Count.OfLeading(start, '.'))
                             {
                                 case 3: (kind, rawWidth) = (TokenKind.ThreeDots, 3); break;
                                 case 2: (kind, rawWidth) = (TokenKind.TwoDots, 2); break;
@@ -718,7 +726,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             }
                             break;
                         case '*':
-                            switch (Count.OfLeading(start, end, '*'))
+                            switch (Count.OfLeading(start, '*'))
                             {
                                 case 75: (kind, rawWidth) = (TokenKind.SeventyFiveStars, 75); break;
                                 case 15: (kind, rawWidth) = (TokenKind.FifteenStars, 15); break;
@@ -729,7 +737,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             }
                             break;
                         case '-':
-                            switch (Count.OfLeading(start, end, '-'))
+                            switch (Count.OfLeading(start, '-'))
                             {
                                 case 137: (kind, rawWidth) = (TokenKind.BasicBlockTableHeader, 137); break;
                                 case 48: (kind, rawWidth) = (TokenKind.FourtyEightDashes, 48); break;
@@ -749,7 +757,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     rawWidth += "BB00".Length;
                     break;
                 ReturnUnknown:
-                    (kind, rawWidth) = (TokenKind.Unknown, 1); break;
+                    kind = TokenKind.Unknown;
+                    rawWidth = 1;
+                    break;
             }
 
             finalWidth += rawWidth;
