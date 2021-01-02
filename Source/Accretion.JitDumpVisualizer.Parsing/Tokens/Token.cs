@@ -38,7 +38,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeEstimatedTime or
                 TokenKind.GenTreeNodeEstimatedCost or
                 TokenKind.GenTreeNodeId or
-                TokenKind.GenTreeNodeVNumber or
+                TokenKind.GenTreeNodeLocalVariableIndex or
                 TokenKind.GenTreeNodeTemporaryNumber or
                 TokenKind.GenTreeNodeArgumentNumber or
                 TokenKind.GenTreeNodeUNumber or 
@@ -75,5 +75,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         public static bool operator ==(Token left, Token right) => left.Equals(right);
         public static bool operator !=(Token left, Token right) => !(left == right);
+
+        public static explicit operator ulong(Token token) => token._token;
     }
 }

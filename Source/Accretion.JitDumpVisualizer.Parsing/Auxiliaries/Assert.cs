@@ -51,12 +51,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
             if (token.Kind == TokenKind.EndOfLine)
             {
                 _dumper.WriteLine();
-                _dumper.Flush();
             }
             else
             {
                 _dumper.Write(token + " ");
-                _dumper.Flush();
+            }
+
+            _dumper.Flush();
+        }
+
+        [Conditional(DebugMode)]
+        public static void Dump(params TokenKind[] tokenKinds)
+        {
+            foreach (var kind in tokenKinds)
+            {
+                Dump(new Token(kind));
             }
         }
 
@@ -71,6 +80,5 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
             return new string(start, 0, i);
         }
-
     }
 }
