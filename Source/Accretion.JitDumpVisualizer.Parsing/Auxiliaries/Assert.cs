@@ -21,7 +21,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         [Conditional(DebugMode)]
         public static void Equal(char* start, string expected, string? message = null) =>
-            True(new string(start, 0, expected.Length) == expected, $"Unexpected string '{Expand(start)}'. Expected: '{expected}'");
+            True(new string(start, 0, expected.Length) == expected, $"Unexpected string '{Expand(start)}'.\r\nExpected: '{expected}'");
 
         [Conditional(DebugMode)]
         public static void FormatEqual(char* start, string expected, string? message = null, bool hex = false, char wildcard = '0', params char[] valid)

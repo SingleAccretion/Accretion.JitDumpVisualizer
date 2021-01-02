@@ -69,18 +69,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             var end = start + InputBufferLength - LookaheadLimit;
             while (start < end)
             {
-                var startCopy = start;
-                var finalWidth = 0;
-                while (*startCopy is ' ' or '\t'
+                while (*start is ' ' or '\t'
 #if RELEASE
                 or '\r' or '\n'
 #endif
                 )
                 {
-                    finalWidth++;
-                    startCopy++;
+                    start++;
                 }
 
+                var startCopy = start;
                 TokenKind kind;
                 int rawWidth = 0;
                 uint rawValue = 0;
@@ -188,104 +186,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     #endregion
 
                     #region Handling of basic block detalization header
-                    case TokenKind.TwelveDashes:
-                        switch (startCopy[0])
-                        {
-                            case 'B':
-                                kind = TokenKind.BasicBlockInTopHeader;
-                                goto ReturnAnyBasicBlock;
-                            default: goto ReturnUnknown;
-                        }
-
-                    case TokenKind.BasicBlockInTopHeader:
-                        kind = TokenKind.BasicBlockILRangeStartInTopHeader;
-                        goto ReturnTwoDotILRangeStart;
-
-                    case TokenKind.BasicBlockILRangeStartInTopHeader:
-                        kind = TokenKind.BasicBlockILRangeEndInTopHeader;
-                        goto ReturnTwoDotILRangeEnd;
-
-                    case TokenKind.BasicBlockILRangeEndInTopHeader:
-                        switch (startCopy[0])
-                        {
-                            case '-':
-                                kind = TokenKind.BasicBlockJumpTargetInTopHeader;
-                                goto ReturnAnyBasicBlockJumpTarget;
-                            case ',': goto ReturnBasicBlockPredInTopHeader;
-                            case '(':
-                                kind = TokenKind.BasicBlockJumpTargetKindInTopHeader;
-                                goto ReturnAnyBasicBlockJumpTargetKind;
-                            default: Assert.Impossible(startCopy); goto ReturnUnknown;
-                        }
-
-                    case TokenKind.BasicBlockJumpTargetInTopHeader:
-                        kind = TokenKind.BasicBlockJumpTargetKindInTopHeader;
-                        goto ReturnAnyBasicBlockJumpTargetKind;
-
-                    case TokenKind.BasicBlockPredInTopHeader or TokenKind.BasicBlockJumpTargetKindInTopHeader:
-                    ReturnBasicBlockPredInTopHeader:
-                        switch (startCopy[0])
-                        {
-                            case ',':
-                                if (startCopy[1] != 'B')
-                                {
-                                    Assert.Equal(startCopy, ", preds={");
-                                    startCopy += ", preds={".Length;
-                                    rawWidth += ", preds={".Length;
-                                    goto ReturnBasicBlockPredInTopHeader;
-                                }
-                                Assert.FormatEqual(startCopy, ",BB00");
-                                startCopy++;
-                                rawWidth++;
-                                goto case 'B';
-                            case 'B':
-                                kind = TokenKind.BasicBlockPredInTopHeader;
-                                goto ReturnAnyBasicBlock;
-                            default:
-                                Assert.Equal(startCopy, "} succs={");
-                                startCopy += "} succs={".Length;
-                                rawWidth += "} succs={".Length;
-                                goto ReturnBasicBlockSuccInTopHeader;
-                        }
-
-                    case TokenKind.BasicBlockSuccInTopHeader:
-                    ReturnBasicBlockSuccInTopHeader:
-                        switch (startCopy[0])
-                        {
-                            case ',':
-                                startCopy++;
-                                rawWidth++;
-                                goto case 'B';
-                            case 'B':
-                                kind = TokenKind.BasicBlockSuccInTopHeader;
-                                goto ReturnAnyBasicBlock;
-                            default: goto ReturnUnknown;
-                        }
-                    #endregion
-
-                    #region Shared labels for basic block table and detalization header
-                    ReturnTwoDotILRangeStart:
-                        Assert.FormatEqual(startCopy, "[000", hex: true, valid: '?');
-                        rawValue = (uint)ParseILRange(startCopy + "[".Length);
-                        rawWidth = "[000".Length;
-                        break;
-
-                    ReturnTwoDotILRangeEnd:
-                        Assert.FormatEqual(startCopy, "..000)", hex: true, valid: '?');
-                        rawValue = (uint)ParseILRange(startCopy + "..".Length);
-                        rawWidth = "..000)".Length;
-                        break;
-
-                    ReturnAnyBasicBlockJumpTarget:
-                        Assert.FormatEqual(startCopy, "-> BB00");
-                        startCopy += "-> ".Length;
-                        rawWidth += "-> ".Length;
-                        goto ReturnAnyBasicBlock;
-
-                    ReturnAnyBasicBlockJumpTargetKind:
-                        rawValue = (uint)Lexer.ParseBasicBlockJumpTargetKind(startCopy, out var jumpKindWidth);
-                        rawWidth = jumpKindWidth;
-                        break;
+                    case TokenKind.TwelveDashes when start[0] is 'B':
+                        tokens = ParseBasicBlockDetalizationHeader(ref start, tokens);
+                        continue;
                     #endregion
 
                     #region Handling of basic block detalization
@@ -577,10 +480,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         break;
                 }
 
-                finalWidth += rawWidth;
                 var token = new Token(kind, (uint)rawValue);
                 *tokens++ = token;
-                start += finalWidth;
+                start += rawWidth;
 
                 Assert.Dump(token);
             }
@@ -659,6 +561,53 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
 
             return tokens;
+        }
+
+        private static Token* ParseBasicBlockDetalizationHeader(ref char* start, Token* tokens)
+        {
+            tokens = Store(tokens, TokenKind.BasicBlockInTopHeader, ParseBasicBlock(start));
+            start += 6;
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTopHeader, ParseILRange(start));
+            start += 5;
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTopHeader, ParseILRange(start));
+            start += 5;
+            if (*start is '-')
+            {
+                Assert.Equal(start, "-> ");
+                start += 3;
+                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTopHeader, ParseBasicBlock(start));
+                start += 5;
+            }
+            if (*start is '(')
+            {
+                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetKindInTopHeader, (uint)Lexer.ParseBasicBlockJumpTargetKind(start, out var width));
+                start += width + 1;
+            }
+
+            Assert.Equal(start, " preds={");
+            start += 8;
+            tokens = ParseBasicBlockSequence(ref start, tokens, TokenKind.BasicBlockPredInTopHeader);
+
+            Assert.Equal(start, " succs={");
+            start += 8;
+            tokens = ParseBasicBlockSequence(ref start, tokens, TokenKind.BasicBlockSuccInTopHeader);
+
+            return tokens;
+
+            static Token* ParseBasicBlockSequence(ref char* start, Token* tokens, TokenKind kind)
+            {
+                while (*start is 'B')
+                {
+                    tokens = Store(tokens, kind, ParseBasicBlock(start));
+                    start += 5;
+                }
+                if (*start is '}')
+                {
+                    start++;
+                }
+
+                return tokens;
+            }
         }
 
         private static int ParseILRange(char* start)
