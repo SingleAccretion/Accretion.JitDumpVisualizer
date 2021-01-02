@@ -185,44 +185,20 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         }
                     #endregion
 
-                    #region Handling of basic block detalization header
+                    #region Handling of basic block detalization top header
                     case TokenKind.TwelveDashes when start[0] is 'B':
-                        tokens = ParseBasicBlockDetalizationHeader(ref start, tokens);
+                        tokens = ParseBasicBlockDetalizationTopHeader(ref start, tokens);
+                        continue;
+                    #endregion
+
+                    #region Handling of basic block detalization inner header
+                    case TokenKind.FourStars:
+                        tokens = ParseBasicBlockDetalizationInnerHeader(ref start, tokens);
                         continue;
                     #endregion
 
                     #region Handling of basic block detalization
-                    case TokenKind.FourStars:
-                        kind = TokenKind.BasicBlockInInnerHeader;
-                        goto ReturnAnyBasicBlock;
-
-                    case TokenKind.BasicBlockInInnerHeader:
-                        switch (startCopy[0])
-                        {
-                            case 'S':
-                                Assert.FormatEqual(startCopy, "STMT00000");
-                                kind = TokenKind.Statement;
-                                rawWidth = "STMT00000".Length;
-                                rawValue = IntegersParser.ParseIntegerFiveDigits(startCopy + "STMT".Length);
-                                break;
-                            default: goto ReturnUnknown;
-                        }
-                        break;
-
-                    case TokenKind.Statement:
-                        Assert.Equal(startCopy, "(IL");
-                        kind = TokenKind.StatementILRangeStart;
-                        rawValue = (uint)ParseILRange(startCopy + "(IL 0x".Length);
-                        rawWidth = "(IL 0x000".Length;
-                        break;
-
-                    case TokenKind.StatementILRangeStart:
-                        Assert.Equal(startCopy, "...");
-                        kind = TokenKind.StatementILRangeEnd;
-                        rawValue = (uint)ParseILRange(startCopy + "...0x".Length);
-                        rawWidth = "...0x000)".Length;
-                        break;
-
+                    case TokenKind.StatementDetalizationState:
                     case TokenKind.StatementILRangeEnd:
                     StartGenTreeNodeDetalizationRow:
                         switch (startCopy[0])
@@ -434,15 +410,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         switch (startCopy[0])
                         {
                             case '\0': (kind, rawWidth) = (TokenKind.EndOfFile, int.MaxValue); break;
-                            case '.':
-                                switch (Count.OfLeading(startCopy, '.'))
-                                {
-                                    case 3: (kind, rawWidth) = (TokenKind.ThreeDots, 3); break;
-                                    case 2: (kind, rawWidth) = (TokenKind.TwoDots, 2); break;
-                                    case 1: (kind, rawWidth) = (TokenKind.Dot, 1); break;
-                                    default: goto ReturnUnknown;
-                                }
-                                break;
                             case '*':
                                 switch (Count.OfLeading(startCopy, '*'))
                                 {
@@ -480,7 +447,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         break;
                 }
 
-                var token = new Token(kind, (uint)rawValue);
+                var token = new Token(kind, rawValue);
                 *tokens++ = token;
                 start += rawWidth;
 
@@ -519,7 +486,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         private static Token* ParseBasicBlockTableRow(ref char* start, Token* tokens)
         {
-            tokens = Store(tokens, TokenKind.BasicBlockInTable, ParseBasicBlock(start));
+            tokens = Store(tokens, TokenKind.BasicBlockInTable, PeekBasicBlock(start));
             start += 6;
             Assert.FormatEqual(start, "0000]");
             tokens = Store(tokens, TokenKind.BasicBlockIdInTable, IntegersParser.ParseIntegerFourDigits(start));
@@ -532,20 +499,20 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             start += 10;
             for (int i = 0; start[i] is 'B'; i += 5)
             {
-                tokens = Store(tokens, TokenKind.BasicBlockPredInTable, ParseBasicBlock(start + i));
+                tokens = Store(tokens, TokenKind.BasicBlockPredInTable, PeekBasicBlock(start + i));
             }
 
             start += 22;
             tokens = Store(tokens, TokenKind.BasicBlockWeightInTable, (uint)BitConverter.SingleToInt32Bits(IntegersParser.ParseGenericFloat(start, out _)));
             start += 10;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTable, ParseILRange(start));
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTable, PeekILRange(start));
             start += 5;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTable, ParseILRange(start));
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTable, PeekILRange(start));
             start += 4;
             if (*start is '-')
             {
                 Assert.Equal(start, "->");
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTable, ParseBasicBlock(start + 3));
+                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTable, PeekBasicBlock(start + 3));
             }
             start += 8;
             if (*start is '(')
@@ -563,19 +530,34 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return tokens;
         }
 
-        private static Token* ParseBasicBlockDetalizationHeader(ref char* start, Token* tokens)
+        private static Token* ParseBasicBlockDetalizationTopHeader(ref char* start, Token* tokens)
         {
-            tokens = Store(tokens, TokenKind.BasicBlockInTopHeader, ParseBasicBlock(start));
+            static Token* ParseBasicBlockSequence(ref char* start, Token* tokens, TokenKind kind)
+            {
+                while (*start is 'B')
+                {
+                    tokens = Store(tokens, kind, PeekBasicBlock(start));
+                    start += 5;
+                }
+                if (*start is '}')
+                {
+                    start++;
+                }
+
+                return tokens;
+            }
+
+            tokens = Store(tokens, TokenKind.BasicBlockInTopHeader, PeekBasicBlock(start));
             start += 6;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTopHeader, ParseILRange(start));
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTopHeader, PeekILRange(start));
             start += 5;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTopHeader, ParseILRange(start));
+            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTopHeader, PeekILRange(start));
             start += 5;
             if (*start is '-')
             {
                 Assert.Equal(start, "-> ");
                 start += 3;
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTopHeader, ParseBasicBlock(start));
+                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTopHeader, PeekBasicBlock(start));
                 start += 5;
             }
             if (*start is '(')
@@ -593,24 +575,44 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             tokens = ParseBasicBlockSequence(ref start, tokens, TokenKind.BasicBlockSuccInTopHeader);
 
             return tokens;
-
-            static Token* ParseBasicBlockSequence(ref char* start, Token* tokens, TokenKind kind)
-            {
-                while (*start is 'B')
-                {
-                    tokens = Store(tokens, kind, ParseBasicBlock(start));
-                    start += 5;
-                }
-                if (*start is '}')
-                {
-                    start++;
-                }
-
-                return tokens;
-            }
         }
 
-        private static int ParseILRange(char* start)
+        private static Token* ParseBasicBlockDetalizationInnerHeader(ref char* start, Token* tokens)
+        {
+            tokens = Store(tokens, TokenKind.BasicBlockInInnerHeader, PeekBasicBlock(start));
+            start += 4;
+            start = *start is ',' ? start + 2 : SkipEndOfLine(start);
+            if (*start is 'S')
+            {
+                tokens = Store(tokens, TokenKind.Statement, PeekStatement(start));
+                start += 9;
+
+                if (*start is '(')
+                {
+                    tokens = Store(tokens, TokenKind.StatementDetalizationState, (uint)Lexer.ParseStatementDetalizationState(start, out var width));
+                    start += width;
+                }
+                else
+                {
+                    start += 7;
+                    tokens = Store(tokens, TokenKind.StatementILRangeStart, PeekILRange(start));
+                    start += 8;
+                    tokens = Store(tokens, TokenKind.StatementILRangeEnd, PeekILRange(start));
+                    start += 4;
+                }
+            }
+
+            return tokens;
+        }
+
+        private static Token* ParseGenTreeNodeDetalization(ref char* start, Token* tokens)
+        {
+
+
+            return tokens;
+        }
+
+        private static int PeekILRange(char* start)
         {
             switch (*start)
             {
@@ -622,10 +624,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
         }
 
-        private static uint ParseBasicBlock(char* start)
+        private static uint PeekBasicBlock(char* start)
         {
             Assert.FormatEqual(start, "BB00");
             return IntegersParser.ParseIntegerTwoDigits(start + 2);
+        }
+
+        private static uint PeekStatement(char* start)
+        {
+            Assert.FormatEqual(start, "STMT00000");
+            return IntegersParser.ParseIntegerFiveDigits(start + 4);
         }
     }
 }

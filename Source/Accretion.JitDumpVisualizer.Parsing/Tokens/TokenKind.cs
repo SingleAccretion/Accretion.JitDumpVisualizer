@@ -8,9 +8,6 @@
         FourStars,
         SixStars,
         FifteenStars,
-        Dot,
-        TwoDots,
-        ThreeDots,
         BasicBlockTableHeader,
         Pipe,
         BasicBlockNumberColumnHeader,
@@ -88,5 +85,6 @@
         GenTreeNodeIsHandle,
         GenTreeNodeNullcheck,
         GenTreeNodeHelper,
+        StatementDetalizationState,
     }
 }

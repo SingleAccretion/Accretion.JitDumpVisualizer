@@ -28,5 +28,15 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
             return true;
         }
+
+        private static bool IsEndOfLine(char* start)
+        {
+            if (*start is '\r' or '\n')
+            {
+                return true;
+            }
+
+            return false;
+        }
     }
 }

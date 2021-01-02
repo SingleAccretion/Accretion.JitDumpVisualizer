@@ -43,6 +43,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeArgumentNumber or
                 TokenKind.GenTreeNodeUNumber or 
                 TokenKind.GenTreeNodeDNumber => RawValue,
+                TokenKind.StatementDetalizationState => (DetalizationState)RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
                 TokenKind.BasicBlockJumpTargetKindInTable or 
                 TokenKind.BasicBlockJumpTargetKindInTopHeader => (BasicBlockJumpTargetKind)RawValue,
