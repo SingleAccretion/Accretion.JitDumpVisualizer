@@ -8,334 +8,127 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
         public static RyuJitFunction ParseRyuJitFunction(char* start, out int width)
         {
             Assert.True(Unsafe.SizeOf<RyuJitFunction>() is 1);
-
-            ulong result;
-            switch (*start)
+            
+            var result = (*start) switch
             {
-                case 'c':
-                    Assert.Equal(start, "compInitDebuggingInfo()");
-                    result = (ulong)RyuJitFunction.CompInitDebuggingInfo | ((ulong)"compInitDebuggingInfo()".Length << (sizeof(RyuJitFunction) * 8));
-                    break;
-                case 'e':
-                    switch (start[4])
+                'c' => Result(RyuJitFunction.CompInitDebuggingInfo, "compInitDebuggingInfo()", start),
+                'e' => (start[4]) switch
+                {
+                    'E' => Result(RyuJitFunction.EmitEndCodeGen, "emitEndCodeGen()", start),
+                    _ => Result(RyuJitFunction.EmitJumpDistBind, "emitJumpDistBind()", start),
+                },
+                'f' => (start[2]) switch
+                {
+                    'C' => (start[3]) switch
                     {
-                        case 'E':
-                            Assert.Equal(start, "emitEndCodeGen()");
-                            result = (ulong)RyuJitFunction.EmitEndCodeGen | ((ulong)"emitEndCodeGen()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "emitJumpDistBind()");
-                            result = (ulong)RyuJitFunction.EmitJumpDistBind | ((ulong)"emitJumpDistBind()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                    }
-                    break;
-                case 'f':
-                    switch (start[2])
+                        'o' => (start[9]) switch
+                        {
+                            'B' => Result(RyuJitFunction.FgComputeBlockAndEdgeWeights, "fgComputeBlockAndEdgeWeights()", start),
+                            'D' => Result(RyuJitFunction.FgComputeDoms, "fgComputeDoms", start),
+                            'P' => Result(RyuJitFunction.FgComputePreds, "fgComputePreds()", start),
+                            _ => Result(RyuJitFunction.FgComputeReachability, "fgComputeReachability", start),
+                        },
+                        _ => Result(RyuJitFunction.FgCreateFunclets, "fgCreateFunclets()", start),
+                    },
+                    'D' => (start[4]) switch
                     {
-                        case 'C':
-                            switch (start[3])
-                            {
-                                case 'o':
-                                    switch (start[9])
-                                    {
-                                        case 'B':
-                                            Assert.Equal(start, "fgComputeBlockAndEdgeWeights()");
-                                            result = (ulong)RyuJitFunction.FgComputeBlockAndEdgeWeights | ((ulong)"fgComputeBlockAndEdgeWeights()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        case 'D':
-                                            Assert.Equal(start, "fgComputeDoms");
-                                            result = (ulong)RyuJitFunction.FgComputeDoms | ((ulong)"fgComputeDoms".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        case 'P':
-                                            Assert.Equal(start, "fgComputePreds()");
-                                            result = (ulong)RyuJitFunction.FgComputePreds | ((ulong)"fgComputePreds()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "fgComputeReachability");
-                                            result = (ulong)RyuJitFunction.FgComputeReachability | ((ulong)"fgComputeReachability".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgCreateFunclets()");
-                                    result = (ulong)RyuJitFunction.FgCreateFunclets | ((ulong)"fgCreateFunclets()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break; ;
-                            }
-                            break;
-                        case 'D':
-                            switch (start[4])
-                            {
-                                case 'b':
-                                    Assert.Equal(start, "fgDebugCheckBBlist");
-                                    result = (ulong)RyuJitFunction.FgDebugCheckBBlist | ((ulong)"fgDebugCheckBBlist".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgDetermineFirstColdBlock()");
-                                    result = (ulong)RyuJitFunction.FgDetermineFirstColdBlock | ((ulong)"fgDetermineFirstColdBlock()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'E':
-                            Assert.Equal(start, "fgExpandRarelyRunBlocks()");
-                            result = (ulong)RyuJitFunction.FgExpandRarelyRunBlocks | ((ulong)"fgExpandRarelyRunBlocks()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'F':
-                            switch (start[6])
-                            {
-                                case 'B':
-                                    Assert.Equal(start, "fgFindBasicBlocks()");
-                                    result = (ulong)RyuJitFunction.FgFindBasicBlocks | ((ulong)"fgFindBasicBlocks()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgFindOperOrder()");
-                                    result = (ulong)RyuJitFunction.FgFindOperOrder | ((ulong)"fgFindOperOrder()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'I':
-                            Assert.Equal(start, "fgInterBlockLocalVarLiveness()");
-                            result = (ulong)RyuJitFunction.FgInterBlockLocalVarLiveness | ((ulong)"fgInterBlockLocalVarLiveness()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'L':
-                            Assert.Equal(start, "fgLocalVarLiveness()");
-                            result = (ulong)RyuJitFunction.FgLocalVarLiveness | ((ulong)"fgLocalVarLiveness()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'M':
-                            switch (start[3])
-                            {
-                                case 'a':
-                                    Assert.Equal(start, "fgMarkAddressExposedLocals()");
-                                    result = (ulong)RyuJitFunction.FgMarkAddressExposedLocals | ((ulong)"fgMarkAddressExposedLocals()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgMorphBlocks()");
-                                    result = (ulong)RyuJitFunction.FgMorphBlocks | ((ulong)"fgMorphBlocks()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'P':
-                            switch (start[3])
-                            {
-                                case 'e':
-                                    Assert.Equal(start, "fgPerBlockLocalVarLiveness()");
-                                    result = (ulong)RyuJitFunction.FgPerBlockLocalVarLiveness | ((ulong)"fgPerBlockLocalVarLiveness()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgPromoteStructs()");
-                                    result = (ulong)RyuJitFunction.FgPromoteStructs | ((ulong)"fgPromoteStructs()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'R':
-                            switch (start[4])
-                            {
-                                case 'm':
-                                    switch (start[13])
-                                    {
-                                        case 'B':
-                                            Assert.Equal(start, "fgRemoveEmptyBlocks");
-                                            result = (ulong)RyuJitFunction.FgRemoveEmptyBlocks | ((ulong)"fgRemoveEmptyBlocks".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "fgRemoveEmptyTry()");
-                                            result = (ulong)RyuJitFunction.FgRemoveEmptyTry | ((ulong)"fgRemoveEmptyTry()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                    }
-                                    break;
-                                case 'o':
-                                    Assert.Equal(start, "fgReorderBlocks()");
-                                    result = (ulong)RyuJitFunction.FgReorderBlocks | ((ulong)"fgReorderBlocks()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                case 's':
-                                    Assert.Equal(start, "fgResetImplicitByRefRefCount()");
-                                    result = (ulong)RyuJitFunction.FgResetImplicitByRefRefCount | ((ulong)"fgResetImplicitByRefRefCount()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "fgRetypeImplicitByRefArgs()");
-                                    result = (ulong)RyuJitFunction.FgRetypeImplicitByRefArgs | ((ulong)"fgRetypeImplicitByRefArgs()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'S':
-                            Assert.Equal(start, "fgSetBlockOrder()");
-                            result = (ulong)RyuJitFunction.FgSetBlockOrder | ((ulong)"fgSetBlockOrder()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'T':
-                            Assert.Equal(start, "fgTailMergeThrows");
-                            result = (ulong)RyuJitFunction.FgTailMergeThrows | ((ulong)"fgTailMergeThrows".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'U':
-                            Assert.Equal(start, "fgUpdateFlowGraph()");
-                            result = (ulong)RyuJitFunction.FgUpdateFlowGraph | ((ulong)"fgUpdateFlowGraph()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "fgValueNumber()");
-                            result = (ulong)RyuJitFunction.FgValueNumber | ((ulong)"fgValueNumber()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                    }
-                    break;
-                case 'g':
-                    switch (start[1])
+                        'b' => Result(RyuJitFunction.FgDebugCheckBBlist, "fgDebugCheckBBlist", start),
+                        _ => Result(RyuJitFunction.FgDetermineFirstColdBlock, "fgDetermineFirstColdBlock()", start),
+                    },
+                    'E' => Result(RyuJitFunction.FgExpandRarelyRunBlocks, "fgExpandRarelyRunBlocks()", start),
+                    'F' => (start[6]) switch
                     {
-                        case 'c':
-                            Assert.Equal(start, "gcInfoBlockHdrSave()");
-                            result = (ulong)RyuJitFunction.GcInfoBlockHdrSave | ((ulong)"gcInfoBlockHdrSave()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            switch (start[3])
-                            {
-                                case 'E':
-                                    Assert.Equal(start, "genEnregisterIncomingStackArgs()");
-                                    result = (ulong)RyuJitFunction.GenEnregisterIncomingStackArgs | ((ulong)"genEnregisterIncomingStackArgs()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                case 'F':
-                                    switch (start[5])
-                                    {
-                                        case 'E':
-                                            Assert.Equal(start, "genFnEpilog()");
-                                            result = (ulong)RyuJitFunction.GenFnEpilog | ((ulong)"genFnEpilog()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        default:
-                                            switch (start[11])
-                                            {
-                                                case '(':
-                                                    Assert.Equal(start, "genFnProlog()");
-                                                    result = (ulong)RyuJitFunction.GenFnProlog | ((ulong)"genFnProlog()".Length << (sizeof(RyuJitFunction) * 8));
-                                                    break;
-                                                default:
-                                                    Assert.Equal(start, "genFnPrologCalleeRegArgs()");
-                                                    result = (ulong)RyuJitFunction.GenFnPrologCalleeRegArgs | ((ulong)"genFnPrologCalleeRegArgs()".Length << (sizeof(RyuJitFunction) * 8));
-                                                    break;
-                                            }
-                                            break;
-                                    }
-                                    break;
-                                case 'G':
-                                    Assert.Equal(start, "genGenerateCode()");
-                                    result = (ulong)RyuJitFunction.GenGenerateCode | ((ulong)"genGenerateCode()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                case 'I':
-                                    Assert.Equal(start, "genIPmappingGen()");
-                                    result = (ulong)RyuJitFunction.GenIPmappingGen | ((ulong)"genIPmappingGen()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "genSetScopeInfo()");
-                                    result = (ulong)RyuJitFunction.GenSetScopeInfo | ((ulong)"genSetScopeInfo()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                    }
-                    break;
-                case 'i':
-                    Assert.Equal(start, "impImport()");
-                    result = (ulong)RyuJitFunction.ImpImport | ((ulong)"impImport()".Length << (sizeof(RyuJitFunction) * 8));
-                    break;
-                case 'L':
-                    Assert.Equal(start, "LinearScan::allocateRegisters()");
-                    result = (ulong)RyuJitFunction.LinearScan_allocateRegisters | ((ulong)"LinearScan::allocateRegisters()".Length << (sizeof(RyuJitFunction) * 8));
-                    break;
-                case 'l':
-                    switch (start[3])
+                        'B' => Result(RyuJitFunction.FgFindBasicBlocks, "fgFindBasicBlocks()", start),
+                        _ => Result(RyuJitFunction.FgFindOperOrder, "fgFindOperOrder()", start),
+                    },
+                    'I' => Result(RyuJitFunction.FgInterBlockLocalVarLiveness, "fgInterBlockLocalVarLiveness()", start),
+                    'L' => Result(RyuJitFunction.FgLocalVarLiveness, "fgLocalVarLiveness()", start),
+                    'M' => (start[3]) switch
                     {
-                        case 'A':
-                            Assert.Equal(start, "lvaAssignFrameOffsets(FINAL_FRAME_LAYOUT)");
-                            result = (ulong)RyuJitFunction.LvaAssignFrameOffsets | ((ulong)"lvaAssignFrameOffsets(FINAL_FRAME_LAYOUT)".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "lvaMarkLocalVars()");
-                            result = (ulong)RyuJitFunction.LvaMarkLocalVars | ((ulong)"lvaMarkLocalVars()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                    }
-                    break;
-                case 'o':
-                    switch (start[3])
+                        'a' => Result(RyuJitFunction.FgMarkAddressExposedLocals, "fgMarkAddressExposedLocals()", start),
+                        _ => Result(RyuJitFunction.FgMorphBlocks, "fgMorphBlocks()", start),
+                    },
+                    'P' => (start[3]) switch
                     {
-                        case 'A':
-                            switch (start[4])
-                            {
-                                case 'd':
-                                    Assert.Equal(start, "optAddCopies()");
-                                    result = (ulong)RyuJitFunction.OptAddCopies | ((ulong)"optAddCopies()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "optAssertionPropMain()");
-                                    result = (ulong)RyuJitFunction.OptAssertionPropMain | ((ulong)"optAssertionPropMain()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'C':
-                            Assert.Equal(start, "optCloneLoops()");
-                            result = (ulong)RyuJitFunction.OptCloneLoops | ((ulong)"optCloneLoops()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'E':
-                            Assert.Equal(start, "optEarlyProp()");
-                            result = (ulong)RyuJitFunction.OptEarlyProp | ((ulong)"optEarlyProp()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'O':
-                            switch (start[11])
-                            {
-                                case 'B':
-                                    Assert.Equal(start, "optOptimizeBools()");
-                                    result = (ulong)RyuJitFunction.OptOptimizeBools | ((ulong)"optOptimizeBools()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                case 'C':
-                                    Assert.Equal(start, "optOptimizeCSEs()");
-                                    result = (ulong)RyuJitFunction.OptOptimizeCSEs | ((ulong)"optOptimizeCSEs()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                                case 'L':
-                                    switch (start[12])
-                                    {
-                                        case 'a':
-                                            Assert.Equal(start, "optOptimizeLayout()");
-                                            result = (ulong)RyuJitFunction.OptOptimizeLayout | ((ulong)"optOptimizeLayout()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "optOptimizeLoops()");
-                                            result = (ulong)RyuJitFunction.OptOptimizeLoops | ((ulong)"optOptimizeLoops()".Length << (sizeof(RyuJitFunction) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "optOptimizeValnumCSEs()");
-                                    result = (ulong)RyuJitFunction.OptOptimizeValnumCSEs | ((ulong)"optOptimizeValnumCSEs()".Length << (sizeof(RyuJitFunction) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'R':
-                            Assert.Equal(start, "optRemoveRedundantZeroInits()");
-                            result = (ulong)RyuJitFunction.OptRemoveRedundantZeroInits | ((ulong)"optRemoveRedundantZeroInits()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "optVnCopyProp()");
-                            result = (ulong)RyuJitFunction.OptVnCopyProp | ((ulong)"optVnCopyProp()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                    }
-                    break;
-                case 'O':
-                    Assert.Equal(start, "OptimizeRangeChecks()");
-                    result = (ulong)RyuJitFunction.OptimizeRangeChecks | ((ulong)"OptimizeRangeChecks()".Length << (sizeof(RyuJitFunction) * 8));
-                    break;
-                default:
-                    switch (start[12])
+                        'e' => Result(RyuJitFunction.FgPerBlockLocalVarLiveness, "fgPerBlockLocalVarLiveness()", start),
+                        _ => Result(RyuJitFunction.FgPromoteStructs, "fgPromoteStructs()", start),
+                    },
+                    'R' => (start[4]) switch
                     {
-                        case 'B':
-                            Assert.Equal(start, "SsaBuilder::Build()");
-                            result = (ulong)RyuJitFunction.SsaBuilder_Build | ((ulong)"SsaBuilder::Build()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        case 'I':
-                            Assert.Equal(start, "SsaBuilder::InsertPhiFunctions()");
-                            result = (ulong)RyuJitFunction.SsaBuilder_InsertPhiFunctions | ((ulong)"SsaBuilder::InsertPhiFunctions()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "SsaBuilder::RenameVariables()");
-                            result = (ulong)RyuJitFunction.SsaBuilder_RenameVariables | ((ulong)"SsaBuilder::RenameVariables()".Length << (sizeof(RyuJitFunction) * 8));
-                            break;
-                    }
-                    break;
-            }
+                        'm' => (start[13]) switch
+                        {
+                            'B' => Result(RyuJitFunction.FgRemoveEmptyBlocks, "fgRemoveEmptyBlocks", start),
+                            _ => Result(RyuJitFunction.FgRemoveEmptyTry, "fgRemoveEmptyTry()", start),
+                        },
+                        'o' => Result(RyuJitFunction.FgReorderBlocks, "fgReorderBlocks()", start),
+                        's' => Result(RyuJitFunction.FgResetImplicitByRefRefCount, "fgResetImplicitByRefRefCount()", start),
+                        _ => Result(RyuJitFunction.FgRetypeImplicitByRefArgs, "fgRetypeImplicitByRefArgs()", start),
+                    },
+                    'S' => Result(RyuJitFunction.FgSetBlockOrder, "fgSetBlockOrder()", start),
+                    'T' => Result(RyuJitFunction.FgTailMergeThrows, "fgTailMergeThrows", start),
+                    'U' => Result(RyuJitFunction.FgUpdateFlowGraph, "fgUpdateFlowGraph()", start),
+                    _ => Result(RyuJitFunction.FgValueNumber, "fgValueNumber()", start),
+                },
+                'g' => (start[1]) switch
+                {
+                    'c' => Result(RyuJitFunction.GcInfoBlockHdrSave, "gcInfoBlockHdrSave()", start),
+                    _ => (start[3]) switch
+                    {
+                        'E' => Result(RyuJitFunction.GenEnregisterIncomingStackArgs, "genEnregisterIncomingStackArgs()", start),
+                        'F' => (start[5]) switch
+                        {
+                            'E' => Result(RyuJitFunction.GenFnEpilog, "genFnEpilog()", start),
+                            _ => (start[11]) switch
+                            {
+                                '(' => Result(RyuJitFunction.GenFnProlog, "genFnProlog()", start),
+                                _ => Result(RyuJitFunction.GenFnPrologCalleeRegArgs, "genFnPrologCalleeRegArgs()", start),
+                            },
+                        },
+                        'G' => Result(RyuJitFunction.GenGenerateCode, "genGenerateCode()", start),
+                        'I' => Result(RyuJitFunction.GenIPmappingGen, "genIPmappingGen()", start),
+                        _ => Result(RyuJitFunction.GenSetScopeInfo, "genSetScopeInfo()", start),
+                    },
+                },
+                'i' => Result(RyuJitFunction.ImpImport, "impImport()", start),
+                'L' => Result(RyuJitFunction.LinearScan_allocateRegisters, "LinearScan::allocateRegisters()", start),
+                'l' => (start[3]) switch
+                {
+                    'A' => Result(RyuJitFunction.LvaAssignFrameOffsets, "lvaAssignFrameOffsets(FINAL_FRAME_LAYOUT)", start),
+                    _ => Result(RyuJitFunction.LvaMarkLocalVars, "lvaMarkLocalVars()", start),
+                },
+                'o' => (start[3]) switch
+                {
+                    'A' => (start[4]) switch
+                    {
+                        'd' => Result(RyuJitFunction.OptAddCopies, "optAddCopies()", start),
+                        _ => Result(RyuJitFunction.OptAssertionPropMain, "optAssertionPropMain()", start),
+                    },
+                    'C' => Result(RyuJitFunction.OptCloneLoops, "optCloneLoops()", start),
+                    'E' => Result(RyuJitFunction.OptEarlyProp, "optEarlyProp()", start),
+                    'O' => (start[11]) switch
+                    {
+                        'B' => Result(RyuJitFunction.OptOptimizeBools, "optOptimizeBools()", start),
+                        'C' => Result(RyuJitFunction.OptOptimizeCSEs, "optOptimizeCSEs()", start),
+                        'L' => (start[12]) switch
+                        {
+                            'a' => Result(RyuJitFunction.OptOptimizeLayout, "optOptimizeLayout()", start),
+                            _ => Result(RyuJitFunction.OptOptimizeLoops, "optOptimizeLoops()", start),
+                        },
+                        _ => Result(RyuJitFunction.OptOptimizeValnumCSEs, "optOptimizeValnumCSEs()", start),
+                    },
+                    'R' => Result(RyuJitFunction.OptRemoveRedundantZeroInits, "optRemoveRedundantZeroInits()", start),
+                    _ => Result(RyuJitFunction.OptVnCopyProp, "optVnCopyProp()", start),
+                },
+                'O' => Result(RyuJitFunction.OptimizeRangeChecks, "OptimizeRangeChecks()", start),
+                _ => (start[12]) switch
+                {
+                    'B' => Result(RyuJitFunction.SsaBuilder_Build, "SsaBuilder::Build()", start),
+                    'I' => Result(RyuJitFunction.SsaBuilder_InsertPhiFunctions, "SsaBuilder::InsertPhiFunctions()", start),
+                    _ => Result(RyuJitFunction.SsaBuilder_RenameVariables, "SsaBuilder::RenameVariables()", start),
+                },
+            };
 
-            width = (int)(result >> (sizeof(RyuJitFunction) * 8));
-            return (RyuJitFunction)result;
+            return Result<RyuJitFunction>(result, out width);
         }
     }
 }

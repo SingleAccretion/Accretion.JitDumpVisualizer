@@ -14,7 +14,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
                 'c' => Result(Register.Rcx, "rcx", start),
                 'd' => Result(Register.Rdx, "rdx", start),
                 '8' => Result(Register.R8, "r8", start),
-                _ => Result(Register.R9, "r9", start),
+                _ => Result(Register.R9, "r9", start)
             };
             
             return Result<Register>(result, out width);

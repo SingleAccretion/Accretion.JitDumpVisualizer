@@ -8,64 +8,28 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
         public static BasicBlockFlag ParseBasicBlockFlag(char* start, out int width)
         {
             Assert.True(Unsafe.SizeOf<BasicBlockFlag>() is 1);
-
-            ulong result;
-            switch (*start)
+            
+            var result = (*start) switch
             {
-                case 'i':
-                    switch (start[1])
-                    {
-                        case 'd':
-                            Assert.Equal(start, "idxlen");
-                            result = (ulong)BasicBlockFlag.IdxLen | ((ulong)"idxlen".Length << (sizeof(BasicBlockFlag) * 8));
-                            break;
-                        case 'n':
-                            Assert.Equal(start, "internal");
-                            result = (ulong)BasicBlockFlag.Internal | ((ulong)"internal".Length << (sizeof(BasicBlockFlag) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "i");
-                            result = (ulong)BasicBlockFlag.I | ((ulong)"i".Length << (sizeof(BasicBlockFlag) * 8));
-                            break;
-                    }
-                    break;
-                case 'l':
-                    Assert.Equal(start, "label");
-                    result = (ulong)BasicBlockFlag.Label | ((ulong)"label".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-                case 't':
-                    Assert.Equal(start, "target");
-                    result = (ulong)BasicBlockFlag.Target | ((ulong)"target".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-                case 'h':
-                    Assert.Equal(start, "hascall");
-                    result = (ulong)BasicBlockFlag.HasCall | ((ulong)"hascall".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-                case 'n':
-                    switch (start[1])
-                    {
-                        case 'e':
-                            Assert.Equal(start, "newobj");
-                            result = (ulong)BasicBlockFlag.NewObj | ((ulong)"newobj".Length << (sizeof(BasicBlockFlag) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "nullcheck");
-                            result = (ulong)BasicBlockFlag.NullCheck | ((ulong)"nullcheck".Length << (sizeof(BasicBlockFlag) * 8));
-                            break;
-                    }
-                    break;
-                case 'g':
-                    Assert.Equal(start, "gcsafe");
-                    result = (ulong)BasicBlockFlag.GCSafe | ((ulong)"gcsafe".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-                default:
-                    Assert.Equal(start, "LIR");
-                    result = (ulong)BasicBlockFlag.LIR | ((ulong)"LIR".Length << (sizeof(BasicBlockFlag) * 8));
-                    break;
-            }
+                'i' => (start[1]) switch
+                {
+                    'd' => Result(BasicBlockFlag.IdxLen, "idxlen", start),
+                    'n' => Result(BasicBlockFlag.Internal, "internal", start),
+                    _ => Result(BasicBlockFlag.I, "i", start)
+                },
+                'l' => Result(BasicBlockFlag.Label, "label", start),
+                't' => Result(BasicBlockFlag.Target, "target", start),
+                'h' => Result(BasicBlockFlag.HasCall, "hascall", start),
+                'n' => (start[1]) switch
+                {
+                    'e' => Result(BasicBlockFlag.NewObj, "newobj", start),
+                    _ => Result(BasicBlockFlag.NullCheck, "nullcheck", start)
+                },
+                'g' => Result(BasicBlockFlag.GCSafe, "gcsafe", start),
+                _ => Result(BasicBlockFlag.LIR, "LIR", start)
+            };
 
-            width = (int)(result >> (sizeof(BasicBlockFlag) * 8));
-            return (BasicBlockFlag)result;
+            return Result<BasicBlockFlag>(result, out width);
         }
     }
 }

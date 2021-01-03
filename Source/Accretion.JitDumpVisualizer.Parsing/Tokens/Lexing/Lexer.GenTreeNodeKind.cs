@@ -9,825 +9,312 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
         {
             Assert.True(Unsafe.SizeOf<GenTreeNodeKind>() is 1);
 
-            ulong result;
-            switch (start[0])
+            var result = (start[0]) switch
             {
-                case 'A':
-                    switch (start[1])
+                'A' => (start[1]) switch
+                {
+                    'D' => (start[3]) switch
                     {
-                        case 'D':
-                            switch (start[3])
-                            {
-                                case 'R':
-                                    Assert.Equal(start, "ADDR");
-                                    result = (ulong)GenTreeNodeKind.ADDR | ((ulong)"ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case '_':
-                                    switch (start[4])
-                                    {
-                                        case 'H':
-                                            Assert.Equal(start, "ADD_HI");
-                                            result = (ulong)GenTreeNodeKind.ADD_HI | ((ulong)"ADD_HI".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "ADD_LO");
-                                            result = (ulong)GenTreeNodeKind.ADD_LO | ((ulong)"ADD_LO".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "ADD");
-                                    result = (ulong)GenTreeNodeKind.ADD | ((ulong)"ADD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'L':
-                            Assert.Equal(start, "ALLOCOBJ");
-                            result = (ulong)GenTreeNodeKind.ALLOCOBJ | ((ulong)"ALLOCOBJ".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'N':
-                            Assert.Equal(start, "AND");
-                            result = (ulong)GenTreeNodeKind.AND | ((ulong)"AND".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'R':
-                            switch (start[5])
-                            {
-                                case 'A':
-                                    Assert.Equal(start, "ARGPLACE");
-                                    result = (ulong)GenTreeNodeKind.ARGPLACE | ((ulong)"ARGPLACE".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'O':
-                                    Assert.Equal(start, "ARR_BOUNDS_CHECK");
-                                    result = (ulong)GenTreeNodeKind.ARR_BOUNDS_CHECK | ((ulong)"ARR_BOUNDS_CHECK".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'L':
-                                    Assert.Equal(start, "ARR_ELEM");
-                                    result = (ulong)GenTreeNodeKind.ARR_ELEM | ((ulong)"ARR_ELEM".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'N':
-                                    Assert.Equal(start, "ARR_INDEX");
-                                    result = (ulong)GenTreeNodeKind.ARR_INDEX | ((ulong)"ARR_INDEX".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'E':
-                                    Assert.Equal(start, "ARR_LENGTH");
-                                    result = (ulong)GenTreeNodeKind.ARR_LENGTH | ((ulong)"ARR_LENGTH".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "ARR_OFFSET");
-                                    result = (ulong)GenTreeNodeKind.ARR_OFFSET | ((ulong)"ARR_OFFSET".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            Assert.Equal(start, "ASG");
-                            result = (ulong)GenTreeNodeKind.ASG | ((ulong)"ASG".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'B':
-                    switch (start[1])
+                        'R' => Result(GenTreeNodeKind.ADDR, "ADDR", start),
+                        '_' => (start[4]) switch
+                        {
+                            'H' => Result(GenTreeNodeKind.ADD_HI, "ADD_HI", start),
+                            _ => Result(GenTreeNodeKind.ADD_LO, "ADD_LO", start)
+                        },
+                        _ => Result(GenTreeNodeKind.ADD, "ADD", start)
+                    },
+                    'L' => Result(GenTreeNodeKind.ALLOCOBJ, "ALLOCOBJ", start),
+                    'N' => Result(GenTreeNodeKind.AND, "AND", start),
+                    'R' => (start[5]) switch
                     {
-                        case 'I':
-                            Assert.Equal(start, "BITCAST");
-                            result = (ulong)GenTreeNodeKind.BITCAST | ((ulong)"BITCAST".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'L':
-                            Assert.Equal(start, "BLK");
-                            result = (ulong)GenTreeNodeKind.BLK | ((ulong)"BLK".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'O':
-                            Assert.Equal(start, "BOX");
-                            result = (ulong)GenTreeNodeKind.BOX | ((ulong)"BOX".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'S':
-                            switch (start[5])
-                            {
-                                case '1':
-                                    Assert.Equal(start, "BSWAP16");
-                                    result = (ulong)GenTreeNodeKind.BSWAP16 | ((ulong)"BSWAP16".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "BSWAP");
-                                    result = (ulong)GenTreeNodeKind.BSWAP | ((ulong)"BSWAP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            Assert.Equal(start, "BT");
-                            result = (ulong)GenTreeNodeKind.BT | ((ulong)"BT".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'C':
-                    switch (start[1])
+                        'A' => Result(GenTreeNodeKind.ARGPLACE, "ARGPLACE", start),
+                        'O' => Result(GenTreeNodeKind.ARR_BOUNDS_CHECK, "ARR_BOUNDS_CHECK", start),
+                        'L' => Result(GenTreeNodeKind.ARR_ELEM, "ARR_ELEM", start),
+                        'N' => Result(GenTreeNodeKind.ARR_INDEX, "ARR_INDEX", start),
+                        'E' => Result(GenTreeNodeKind.ARR_LENGTH, "ARR_LENGTH", start),
+                        _ => Result(GenTreeNodeKind.ARR_OFFSET, "ARR_OFFSET", start)
+                    },
+                    _ => Result(GenTreeNodeKind.ASG, "ASG", start)
+                },
+                'B' => (start[1]) switch
+                {
+                    'I' => Result(GenTreeNodeKind.BITCAST, "BITCAST", start),
+                    'L' => Result(GenTreeNodeKind.BLK, "BLK", start),
+                    'O' => Result(GenTreeNodeKind.BOX, "BOX", start),
+                    'S' => (start[5]) switch
                     {
-                        case 'A':
-                            switch (start[2])
-                            {
-                                case 'L':
-                                    Assert.Equal(start, "CALL");
-                                    result = (ulong)GenTreeNodeKind.CALL | ((ulong)"CALL".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'S':
-                                    Assert.Equal(start, "CAST");
-                                    result = (ulong)GenTreeNodeKind.CAST | ((ulong)"CAST".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "CATCH_ARG");
-                                    result = (ulong)GenTreeNodeKind.CATCH_ARG | ((ulong)"CATCH_ARG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'K':
-                            Assert.Equal(start, "CKFINITE");
-                            result = (ulong)GenTreeNodeKind.CKFINITE | ((ulong)"CKFINITE".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'L':
-                            switch (start[7])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "CLS_VAR_ADDR");
-                                    result = (ulong)GenTreeNodeKind.CLS_VAR_ADDR | ((ulong)"CLS_VAR_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "CLS_VAR");
-                                    result = (ulong)GenTreeNodeKind.CLS_VAR | ((ulong)"CLS_VAR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'M':
-                            switch (start[3])
-                            {
-                                case 'X':
-                                    Assert.Equal(start, "CMPXCHG");
-                                    result = (ulong)GenTreeNodeKind.CMPXCHG | ((ulong)"CMPXCHG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "CMP");
-                                    result = (ulong)GenTreeNodeKind.CMP | ((ulong)"CMP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'N':
-                            switch (start[4])
-                            {
-                                case 'N':
-                                    Assert.Equal(start, "CNS_DBL");
-                                    result = (ulong)GenTreeNodeKind.CNS_DBL | ((ulong)"CNS_DBL".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'I':
-                                    Assert.Equal(start, "CNS_INT");
-                                    result = (ulong)GenTreeNodeKind.CNS_INT | ((ulong)"CNS_INT".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'L':
-                                    Assert.Equal(start, "CNS_LNG");
-                                    result = (ulong)GenTreeNodeKind.CNS_LNG | ((ulong)"CNS_LNG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "CNS_STR");
-                                    result = (ulong)GenTreeNodeKind.CNS_STR | ((ulong)"CNS_STR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            switch (start[2])
-                            {
-                                case 'L':
-                                    Assert.Equal(start, "COLON");
-                                    result = (ulong)GenTreeNodeKind.COLON | ((ulong)"COLON".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'M':
-                                    Assert.Equal(start, "COMMA");
-                                    result = (ulong)GenTreeNodeKind.COMMA | ((ulong)"COMMA".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "COPY");
-                                    result = (ulong)GenTreeNodeKind.COPY | ((ulong)"COPY".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                    }
-                    break;
-                case 'D':
-                    switch (start[1])
+                        '1' => Result(GenTreeNodeKind.BSWAP16, "BSWAP16", start),
+                        _ => Result(GenTreeNodeKind.BSWAP, "BSWAP", start)
+                    },
+                    _ => Result(GenTreeNodeKind.BT, "BT", start)
+                },
+                'C' => (start[1]) switch
+                {
+                    'A' => (start[2]) switch
                     {
-                        case 'I':
-                            Assert.Equal(start, "DIV");
-                            result = (ulong)GenTreeNodeKind.DIV | ((ulong)"DIV".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "DYN_BLK");
-                            result = (ulong)GenTreeNodeKind.DYN_BLK | ((ulong)"DYN_BLK".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'E':
-                    switch (start[1])
+                        'L' => Result(GenTreeNodeKind.CALL, "CALL", start),
+                        'S' => Result(GenTreeNodeKind.CAST, "CAST", start),
+                        _ => Result(GenTreeNodeKind.CATCH_ARG, "CATCH_ARG", start)
+                    },
+                    'K' => Result(GenTreeNodeKind.CKFINITE, "CKFINITE", start),
+                    'L' => (start[7]) switch
                     {
-                        case 'M':
-                            Assert.Equal(start, "EMITNOP");
-                            result = (ulong)GenTreeNodeKind.EMITNOP | ((ulong)"EMITNOP".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'N':
-                            Assert.Equal(start, "END_LFIN");
-                            result = (ulong)GenTreeNodeKind.END_LFIN | ((ulong)"END_LFIN".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "EQ");
-                            result = (ulong)GenTreeNodeKind.EQ | ((ulong)"EQ".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'F':
-                    switch (start[1])
+                        '_' => Result(GenTreeNodeKind.CLS_VAR_ADDR, "CLS_VAR_ADDR", start),
+                        _ => Result(GenTreeNodeKind.CLS_VAR, "CLS_VAR", start)
+                    },
+                    'M' => (start[3]) switch
                     {
-                        case 'I':
-                            switch (start[5])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "FIELD_LIST");
-                                    result = (ulong)GenTreeNodeKind.FIELD_LIST | ((ulong)"FIELD_LIST".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "FIELD");
-                                    result = (ulong)GenTreeNodeKind.FIELD | ((ulong)"FIELD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            Assert.Equal(start, "FTN_ADDR");
-                            result = (ulong)GenTreeNodeKind.FTN_ADDR | ((ulong)"FTN_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'G':
-                    switch (start[1])
+                        'X' => Result(GenTreeNodeKind.CMPXCHG, "CMPXCHG", start),
+                        _ => Result(GenTreeNodeKind.CMP, "CMP", start)
+                    },
+                    'N' => (start[4]) switch
                     {
-                        case 'E':
-                            Assert.Equal(start, "GE");
-                            result = (ulong)GenTreeNodeKind.GE | ((ulong)"GE".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "GT");
-                            result = (ulong)GenTreeNodeKind.GT | ((ulong)"GT".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'H':
-                    switch (start[2])
+                        'N' => Result(GenTreeNodeKind.CNS_DBL, "CNS_DBL", start),
+                        'I' => Result(GenTreeNodeKind.CNS_INT, "CNS_INT", start),
+                        'L' => Result(GenTreeNodeKind.CNS_LNG, "CNS_LNG", start),
+                        _ => Result(GenTreeNodeKind.CNS_STR, "CNS_STR", start)
+                    },
+                    _ => (start[2]) switch
                     {
-                        case 'I':
-                            Assert.Equal(start, "HWINTRINSIC");
-                            result = (ulong)GenTreeNodeKind.HWINTRINSIC | ((ulong)"HWINTRINSIC".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "HW_INTRINSIC_CHK");
-                            result = (ulong)GenTreeNodeKind.HW_INTRINSIC_CHK | ((ulong)"HW_INTRINSIC_CHK".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'I':
-                    switch (start[1])
+                        'L' => Result(GenTreeNodeKind.COLON, "COLON", start),
+                        'M' => Result(GenTreeNodeKind.COMMA, "COMMA", start),
+                        _ => Result(GenTreeNodeKind.COPY, "COPY", start)
+                    },
+                },
+                'D' => (start[1]) switch
+                {
+                    'I' => Result(GenTreeNodeKind.DIV, "DIV", start),
+                    _ => Result(GenTreeNodeKind.DYN_BLK, "DYN_BLK", start)
+                },
+                'E' => (start[1]) switch
+                {
+                    'M' => Result(GenTreeNodeKind.EMITNOP, "EMITNOP", start),
+                    'N' => Result(GenTreeNodeKind.END_LFIN, "END_LFIN", start),
+                    _ => Result(GenTreeNodeKind.EQ, "EQ", start)
+                },
+                'F' => (start[1]) switch
+                {
+                    'I' => (start[5]) switch
                     {
-                        case 'L':
-                            Assert.Equal(start, "IL_OFFSET");
-                            result = (ulong)GenTreeNodeKind.IL_OFFSET | ((ulong)"IL_OFFSET".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            switch (start[2])
-                            {
-                                case 'D':
-                                    switch (start[3])
-                                    {
-                                        case 'E':
-                                            switch (start[5])
-                                            {
-                                                case '_':
-                                                    Assert.Equal(start, "INDEX_ADDR");
-                                                    result = (ulong)GenTreeNodeKind.INDEX_ADDR | ((ulong)"INDEX_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                                    break;
-                                                default:
-                                                    Assert.Equal(start, "INDEX");
-                                                    result = (ulong)GenTreeNodeKind.INDEX | ((ulong)"INDEX".Length << (sizeof(GenTreeNodeKind) * 8));
-                                                    break;
-                                            }
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "IND");
-                                            result = (ulong)GenTreeNodeKind.IND | ((ulong)"IND".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                case 'I':
-                                    Assert.Equal(start, "INIT_VAL");
-                                    result = (ulong)GenTreeNodeKind.INIT_VAL | ((ulong)"INIT_VAL".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "INTRINSIC");
-                                    result = (ulong)GenTreeNodeKind.INTRINSIC | ((ulong)"INTRINSIC".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                    }
-                    break;
-                case 'J':
-                    switch (start[1])
+                        '_' => Result(GenTreeNodeKind.FIELD_LIST, "FIELD_LIST", start),
+                        _ => Result(GenTreeNodeKind.FIELD, "FIELD", start)
+                    },
+                    _ => Result(GenTreeNodeKind.FTN_ADDR, "FTN_ADDR", start)
+                },
+                'G' => (start[1]) switch
+                {
+                    'E' => Result(GenTreeNodeKind.GE, "GE", start),
+                    _ => Result(GenTreeNodeKind.GT, "GT", start)
+                },
+                'H' => (start[2]) switch
+                {
+                    'I' => Result(GenTreeNodeKind.HWINTRINSIC, "HWINTRINSIC", start),
+                    _ => Result(GenTreeNodeKind.HW_INTRINSIC_CHK, "HW_INTRINSIC_CHK", start)
+                },
+                'I' => (start[1]) switch
+                {
+                    'L' => Result(GenTreeNodeKind.IL_OFFSET, "IL_OFFSET", start),
+                    _ => (start[2]) switch
                     {
-                        case 'C':
-                            switch (start[2])
+                        'D' => (start[3]) switch
+                        {
+                            'E' => (start[5]) switch
                             {
-                                case 'C':
-                                    Assert.Equal(start, "JCC");
-                                    result = (ulong)GenTreeNodeKind.JCC | ((ulong)"JCC".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "JCMP");
-                                    result = (ulong)GenTreeNodeKind.JCMP | ((ulong)"JCMP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'M':
-                            switch (start[3])
-                            {
-                                case 'T':
-                                    Assert.Equal(start, "JMPTABLE");
-                                    result = (ulong)GenTreeNodeKind.JMPTABLE | ((ulong)"JMPTABLE".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "JMP");
-                                    result = (ulong)GenTreeNodeKind.JMP | ((ulong)"JMP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            Assert.Equal(start, "JTRUE");
-                            result = (ulong)GenTreeNodeKind.JTRUE | ((ulong)"JTRUE".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
+                                '_' => Result(GenTreeNodeKind.INDEX_ADDR, "INDEX_ADDR", start),
+                                _ => Result(GenTreeNodeKind.INDEX, "INDEX", start)
+                            },
+                            _ => Result(GenTreeNodeKind.IND, "IND", start)
+                        },
+                        'I' => Result(GenTreeNodeKind.INIT_VAL, "INIT_VAL", start),
+                        _ => Result(GenTreeNodeKind.INTRINSIC, "INTRINSIC", start),
                     }
-                    break;
-                case 'K':
-                    Assert.Equal(start, "KEEPALIVE");
-                    result = (ulong)GenTreeNodeKind.KEEPALIVE | ((ulong)"KEEPALIVE".Length << (sizeof(GenTreeNodeKind) * 8));
-                    break;
-                case 'L':
-                    switch (start[1])
+                },
+                'J' => (start[1]) switch
+                {
+                    'C' => (start[2]) switch
                     {
-                        case 'A':
-                            Assert.Equal(start, "LABEL");
-                            result = (ulong)GenTreeNodeKind.LABEL | ((ulong)"LABEL".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'C':
-                            switch (start[4])
-                            {
-                                case 'E':
-                                    Assert.Equal(start, "LCLHEAP");
-                                    result = (ulong)GenTreeNodeKind.LCLHEAP | ((ulong)"LCLHEAP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'F':
-                                    switch (start[7])
-                                    {
-                                        case '_':
-                                            Assert.Equal(start, "LCL_FLD_ADDR");
-                                            result = (ulong)GenTreeNodeKind.LCL_FLD_ADDR | ((ulong)"LCL_FLD_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "LCL_FLD");
-                                            result = (ulong)GenTreeNodeKind.LCL_FLD | ((ulong)"LCL_FLD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    switch (start[7])
-                                    {
-                                        case '_':
-                                            Assert.Equal(start, "LCL_VAR_ADDR");
-                                            result = (ulong)GenTreeNodeKind.LCL_VAR_ADDR | ((ulong)"LCL_VAR_ADDR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "LCL_VAR");
-                                            result = (ulong)GenTreeNodeKind.LCL_VAR | ((ulong)"LCL_VAR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                            }
-                            break;
-                        case 'E':
-                            switch (start[2])
-                            {
-                                case 'A':
-                                    Assert.Equal(start, "LEA");
-                                    result = (ulong)GenTreeNodeKind.LEA | ((ulong)"LEA".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "LE");
-                                    result = (ulong)GenTreeNodeKind.LE | ((ulong)"LE".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'I':
-                            Assert.Equal(start, "LIST");
-                            result = (ulong)GenTreeNodeKind.LIST | ((ulong)"LIST".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'O':
-                            switch (start[2])
-                            {
-                                case 'C':
-                                    Assert.Equal(start, "LOCKADD");
-                                    result = (ulong)GenTreeNodeKind.LOCKADD | ((ulong)"LOCKADD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "LONG");
-                                    result = (ulong)GenTreeNodeKind.LONG | ((ulong)"LONG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'S':
-                            switch (start[3])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "LSH_HI");
-                                    result = (ulong)GenTreeNodeKind.LSH_HI | ((ulong)"LSH_HI".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "LSH");
-                                    result = (ulong)GenTreeNodeKind.LSH | ((ulong)"LSH".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            Assert.Equal(start, "LT");
-                            result = (ulong)GenTreeNodeKind.LT | ((ulong)"LT".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'M':
-                    switch (start[1])
+                        'C' => Result(GenTreeNodeKind.JCC, "JCC", start),
+                        _ => Result(GenTreeNodeKind.JCMP, "JCMP", start)
+                    },
+                    'M' => (start[3]) switch
                     {
-                        case 'E':
-                            Assert.Equal(start, "MEMORYBARRIER");
-                            result = (ulong)GenTreeNodeKind.MEMORYBARRIER | ((ulong)"MEMORYBARRIER".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'K':
-                            Assert.Equal(start, "MKREFANY");
-                            result = (ulong)GenTreeNodeKind.MKREFANY | ((ulong)"MKREFANY".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'O':
-                            Assert.Equal(start, "MOD");
-                            result = (ulong)GenTreeNodeKind.MOD | ((ulong)"MOD".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            switch (start[3])
-                            {
-                                case 'H':
-                                    Assert.Equal(start, "MULHI");
-                                    result = (ulong)GenTreeNodeKind.MULHI | ((ulong)"MULHI".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case '_':
-                                    Assert.Equal(start, "MUL_LONG");
-                                    result = (ulong)GenTreeNodeKind.MUL_LONG | ((ulong)"MUL_LONG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "MUL");
-                                    result = (ulong)GenTreeNodeKind.MUL | ((ulong)"MUL".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                    }
-                    break;
-                case 'N':
-                    switch (start[2])
+                        'T' => Result(GenTreeNodeKind.JMPTABLE, "JMPTABLE", start),
+                        _ => Result(GenTreeNodeKind.JMP, "JMP", start)
+                    },
+                    _ => Result(GenTreeNodeKind.JTRUE, "JTRUE", start)
+                },
+                'K' => Result(GenTreeNodeKind.KEEPALIVE, "KEEPALIVE", start),
+                'L' => (start[1]) switch
+                {
+                    'A' => Result(GenTreeNodeKind.LABEL, "LABEL", start),
+                    'C' => (start[4]) switch
                     {
-                        case 'G':
-                            Assert.Equal(start, "NEG");
-                            result = (ulong)GenTreeNodeKind.NEG | ((ulong)"NEG".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'P':
-                            Assert.Equal(start, "NOP");
-                            result = (ulong)GenTreeNodeKind.NOP | ((ulong)"NOP".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'T':
-                            Assert.Equal(start, "NOT");
-                            result = (ulong)GenTreeNodeKind.NOT | ((ulong)"NOT".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case '_':
-                            Assert.Equal(start, "NO_OP");
-                            result = (ulong)GenTreeNodeKind.NO_OP | ((ulong)"NO_OP".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'L':
-                            Assert.Equal(start, "NULLCHECK");
-                            result = (ulong)GenTreeNodeKind.NULLCHECK | ((ulong)"NULLCHECK".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "NE");
-                            result = (ulong)GenTreeNodeKind.NE | ((ulong)"NE".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'O':
-                    switch (start[1])
+                        'E' => Result(GenTreeNodeKind.LCLHEAP, "LCLHEAP", start),
+                        'F' => (start[7]) switch
+                        {
+                            '_' => Result(GenTreeNodeKind.LCL_FLD_ADDR, "LCL_FLD_ADDR", start),
+                            _ => Result(GenTreeNodeKind.LCL_FLD, "LCL_FLD", start)
+                        },
+                        _ => (start[7]) switch
+                        {
+                            '_' => Result(GenTreeNodeKind.LCL_VAR_ADDR, "LCL_VAR_ADDR", start),
+                            _ => Result(GenTreeNodeKind.LCL_VAR, "LCL_VAR", start)
+                        }
+                    },
+                    'E' => (start[2]) switch
                     {
-                        case 'B':
-                            Assert.Equal(start, "OBJ");
-                            result = (ulong)GenTreeNodeKind.OBJ | ((ulong)"OBJ".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "OR");
-                            result = (ulong)GenTreeNodeKind.OR | ((ulong)"OR".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'P':
-                    switch (start[2])
+                        'A' => Result(GenTreeNodeKind.LEA, "LEA", start),
+                        _ => Result(GenTreeNodeKind.LE, "LE", start)
+                    },
+                    'I' => Result(GenTreeNodeKind.LIST, "LIST", start),
+                    'O' => (start[2]) switch
                     {
-                        case 'I':
-                            switch (start[3])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "PHI_ARG");
-                                    result = (ulong)GenTreeNodeKind.PHI_ARG | ((ulong)"PHI_ARG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "PHI");
-                                    result = (ulong)GenTreeNodeKind.PHI | ((ulong)"PHI".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'Y':
-                            Assert.Equal(start, "PHYSREG");
-                            result = (ulong)GenTreeNodeKind.PHYSREG | ((ulong)"PHYSREG".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'N':
-                            switch (start[8])
-                            {
-                                case 'E':
-                                    Assert.Equal(start, "PINVOKE_EPILOG");
-                                    result = (ulong)GenTreeNodeKind.PINVOKE_EPILOG | ((ulong)"PINVOKE_EPILOG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "PINVOKE_PROLOG");
-                                    result = (ulong)GenTreeNodeKind.PINVOKE_PROLOG | ((ulong)"PINVOKE_PROLOG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'O':
-                            Assert.Equal(start, "PROF_HOOK");
-                            result = (ulong)GenTreeNodeKind.PROF_HOOK | ((ulong)"PROF_HOOK".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            switch (start[8])
-                            {
-                                case 'E':
-                                    Assert.Equal(start, "PUTARG_REG");
-                                    result = (ulong)GenTreeNodeKind.PUTARG_REG | ((ulong)"PUTARG_REG".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'P':
-                                    Assert.Equal(start, "PUTARG_SPLIT");
-                                    result = (ulong)GenTreeNodeKind.PUTARG_SPLIT | ((ulong)"PUTARG_SPLIT".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'T':
-                                    Assert.Equal(start, "PUTARG_STK");
-                                    result = (ulong)GenTreeNodeKind.PUTARG_STK | ((ulong)"PUTARG_STK".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "PUTARG_TYPE");
-                                    result = (ulong)GenTreeNodeKind.PUTARG_TYPE | ((ulong)"PUTARG_TYPE".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                    }
-                    break;
-                case 'Q':
-                    Assert.Equal(start, "QMARK");
-                    result = (ulong)GenTreeNodeKind.QMARK | ((ulong)"QMARK".Length << (sizeof(GenTreeNodeKind) * 8));
-                    break;
-                case 'R':
-                    switch (start[2])
+                        'C' => Result(GenTreeNodeKind.LOCKADD, "LOCKADD", start),
+                        _ => Result(GenTreeNodeKind.LONG, "LONG", start)
+                    },
+                    'S' => (start[3]) switch
                     {
-                        case 'L':
-                            switch (start[3])
-                            {
-                                case 'O':
-                                    Assert.Equal(start, "RELOAD");
-                                    result = (ulong)GenTreeNodeKind.RELOAD | ((ulong)"RELOAD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "ROL");
-                                    result = (ulong)GenTreeNodeKind.ROL | ((ulong)"ROL".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'T':
-                            switch (start[3])
-                            {
-                                case 'F':
-                                    Assert.Equal(start, "RETFILT");
-                                    result = (ulong)GenTreeNodeKind.RETFILT | ((ulong)"RETFILT".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'U':
-                                    switch (start[6])
-                                    {
-                                        case 'T':
-                                            Assert.Equal(start, "RETURNTRAP");
-                                            result = (ulong)GenTreeNodeKind.RETURNTRAP | ((ulong)"RETURNTRAP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "RETURN");
-                                            result = (ulong)GenTreeNodeKind.RETURN | ((ulong)"RETURN".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "RET_EXPR");
-                                    result = (ulong)GenTreeNodeKind.RET_EXPR | ((ulong)"RET_EXPR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'R':
-                            Assert.Equal(start, "ROR");
-                            result = (ulong)GenTreeNodeKind.ROR | ((ulong)"ROR".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'H':
-                            switch (start[3])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "RSH_LO");
-                                    result = (ulong)GenTreeNodeKind.RSH_LO | ((ulong)"RSH_LO".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "RSH");
-                                    result = (ulong)GenTreeNodeKind.RSH | ((ulong)"RSH".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'Z':
-                            Assert.Equal(start, "RSZ");
-                            result = (ulong)GenTreeNodeKind.RSZ | ((ulong)"RSZ".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "RUNTIMELOOKUP");
-                            result = (ulong)GenTreeNodeKind.RUNTIMELOOKUP | ((ulong)"RUNTIMELOOKUP".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'S':
-                    switch (start[1])
+                        '_' => Result(GenTreeNodeKind.LSH_HI, "LSH_HI", start),
+                        _ => Result(GenTreeNodeKind.LSH, "LSH", start)
+                    },
+                    _ => Result(GenTreeNodeKind.LT, "LT", start)
+                },
+                'M' => (start[1]) switch
+                {
+                    'E' => Result(GenTreeNodeKind.MEMORYBARRIER, "MEMORYBARRIER", start),
+                    'K' => Result(GenTreeNodeKind.MKREFANY, "MKREFANY", start),
+                    'O' => Result(GenTreeNodeKind.MOD, "MOD", start),
+                    _ => (start[3]) switch
                     {
-                        case 'E':
-                            Assert.Equal(start, "SETCC");
-                            result = (ulong)GenTreeNodeKind.SETCC | ((ulong)"SETCC".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'I':
-                            switch (start[4])
-                            {
-                                case '_':
-                                    Assert.Equal(start, "SIMD_CHK");
-                                    result = (ulong)GenTreeNodeKind.SIMD_CHK | ((ulong)"SIMD_CHK".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    Assert.Equal(start, "SIMD");
-                                    result = (ulong)GenTreeNodeKind.SIMD | ((ulong)"SIMD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'T':
-                            switch (start[7])
-                            {
-                                case 'O':
-                                    Assert.Equal(start, "START_NONGC");
-                                    result = (ulong)GenTreeNodeKind.START_NONGC | ((ulong)"START_NONGC".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'R':
-                                    Assert.Equal(start, "START_PREEMPTGC");
-                                    result = (ulong)GenTreeNodeKind.START_PREEMPTGC | ((ulong)"START_PREEMPTGC".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'D':
-                                    Assert.Equal(start, "STOREIND");
-                                    result = (ulong)GenTreeNodeKind.STOREIND | ((ulong)"STOREIND".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'L':
-                                    Assert.Equal(start, "STORE_BLK");
-                                    result = (ulong)GenTreeNodeKind.STORE_BLK | ((ulong)"STORE_BLK".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'Y':
-                                    Assert.Equal(start, "STORE_DYN_BLK");
-                                    result = (ulong)GenTreeNodeKind.STORE_DYN_BLK | ((ulong)"STORE_DYN_BLK".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                case 'C':
-                                    switch (start[10])
-                                    {
-                                        case 'F':
-                                            Assert.Equal(start, "STORE_LCL_FLD");
-                                            result = (ulong)GenTreeNodeKind.STORE_LCL_FLD | ((ulong)"STORE_LCL_FLD".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "STORE_LCL_VAR");
-                                            result = (ulong)GenTreeNodeKind.STORE_LCL_VAR | ((ulong)"STORE_LCL_VAR".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "STORE_OBJ");
-                                    result = (ulong)GenTreeNodeKind.STORE_OBJ | ((ulong)"STORE_OBJ".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        case 'U':
-                            switch (start[3])
-                            {
-                                case '_':
-                                    switch (start[4])
-                                    {
-                                        case 'H':
-                                            Assert.Equal(start, "SUB_HI");
-                                            result = (ulong)GenTreeNodeKind.SUB_HI | ((ulong)"SUB_HI".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "SUB_LO");
-                                            result = (ulong)GenTreeNodeKind.SUB_LO | ((ulong)"SUB_LO".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    Assert.Equal(start, "SUB");
-                                    result = (ulong)GenTreeNodeKind.SUB | ((ulong)"SUB".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                            }
-                            break;
-                        default:
-                            switch (start[2])
-                            {
-                                case 'A':
-                                    Assert.Equal(start, "SWAP");
-                                    result = (ulong)GenTreeNodeKind.SWAP | ((ulong)"SWAP".Length << (sizeof(GenTreeNodeKind) * 8));
-                                    break;
-                                default:
-                                    switch (start[6])
-                                    {
-                                        case '_':
-                                            Assert.Equal(start, "SWITCH_TABLE");
-                                            result = (ulong)GenTreeNodeKind.SWITCH_TABLE | ((ulong)"SWITCH_TABLE".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                        default:
-                                            Assert.Equal(start, "SWITCH");
-                                            result = (ulong)GenTreeNodeKind.SWITCH | ((ulong)"SWITCH".Length << (sizeof(GenTreeNodeKind) * 8));
-                                            break;
-                                    }
-                                    break;
-                            }
-                            break;
+                        'H' => Result(GenTreeNodeKind.MULHI, "MULHI", start),
+                        '_' => Result(GenTreeNodeKind.MUL_LONG, "MUL_LONG", start),
+                        _ => Result(GenTreeNodeKind.MUL, "MUL", start)
                     }
-                    break;
-                case 'T':
-                    switch (start[5])
+                },
+                'N' => (start[2]) switch
+                {
+                    'G' => Result(GenTreeNodeKind.NEG, "NEG", start),
+                    'P' => Result(GenTreeNodeKind.NOP, "NOP", start),
+                    'T' => Result(GenTreeNodeKind.NOT, "NOT", start),
+                    '_' => Result(GenTreeNodeKind.NO_OP, "NO_OP", start),
+                    'L' => Result(GenTreeNodeKind.NULLCHECK, "NULLCHECK", start),
+                    _ => Result(GenTreeNodeKind.NE, "NE", start)
+                },
+                'O' => (start[1]) switch
+                {
+                    'B' => Result(GenTreeNodeKind.OBJ, "OBJ", start),
+                    _ => Result(GenTreeNodeKind.OR, "OR", start)
+                },
+                'P' => (start[2]) switch
+                {
+                    'I' => (start[3]) switch
                     {
-                        case 'E':
-                            Assert.Equal(start, "TEST_EQ");
-                            result = (ulong)GenTreeNodeKind.TEST_EQ | ((ulong)"TEST_EQ".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'N':
-                            Assert.Equal(start, "TEST_NE");
-                            result = (ulong)GenTreeNodeKind.TEST_NE | ((ulong)"TEST_NE".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "TURE_ARG_SPLIT");
-                            result = (ulong)GenTreeNodeKind.TURE_ARG_SPLIT | ((ulong)"TURE_ARG_SPLIT".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                case 'U':
-                    switch (start[1])
+                        '_' => Result(GenTreeNodeKind.PHI_ARG, "PHI_ARG", start),
+                        _ => Result(GenTreeNodeKind.PHI, "PHI", start)
+                    },
+                    'Y' => Result(GenTreeNodeKind.PHYSREG, "PHYSREG", start),
+                    'N' => (start[8]) switch
                     {
-                        case 'D':
-                            Assert.Equal(start, "UDIV");
-                            result = (ulong)GenTreeNodeKind.UDIV | ((ulong)"UDIV".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "UMOD");
-                            result = (ulong)GenTreeNodeKind.UMOD | ((ulong)"UMOD".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                    }
-                    break;
-                default:
-                    switch (start[1])
+                        'E' => Result(GenTreeNodeKind.PINVOKE_EPILOG, "PINVOKE_EPILOG", start),
+                        _ => Result(GenTreeNodeKind.PINVOKE_PROLOG, "PINVOKE_PROLOG", start)
+                    },
+                    'O' => Result(GenTreeNodeKind.PROF_HOOK, "PROF_HOOK", start),
+                    _ => (start[8]) switch
                     {
-                        case 'A':
-                            Assert.Equal(start, "XADD");
-                            result = (ulong)GenTreeNodeKind.XADD | ((ulong)"XADD".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        case 'C':
-                            Assert.Equal(start, "XCHG");
-                            result = (ulong)GenTreeNodeKind.XCHG | ((ulong)"XCHG".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
-                        default:
-                            Assert.Equal(start, "XOR");
-                            result = (ulong)GenTreeNodeKind.XOR | ((ulong)"XOR".Length << (sizeof(GenTreeNodeKind) * 8));
-                            break;
+                        'E' => Result(GenTreeNodeKind.PUTARG_REG, "PUTARG_REG", start),
+                        'P' => Result(GenTreeNodeKind.PUTARG_SPLIT, "PUTARG_SPLIT", start),
+                        'T' => Result(GenTreeNodeKind.PUTARG_STK, "PUTARG_STK", start),
+                        _ => Result(GenTreeNodeKind.PUTARG_TYPE, "PUTARG_TYPE", start)
                     }
-                    break;
-            }
-
-            width = (int)(result >> (sizeof(GenTreeNodeKind) * 8));
-            return (GenTreeNodeKind)result;
+                },
+                'Q' => Result(GenTreeNodeKind.QMARK, "QMARK", start),
+                'R' => (start[2]) switch
+                {
+                    'L' => (start[3]) switch
+                    {
+                        'O' => Result(GenTreeNodeKind.RELOAD, "RELOAD", start),
+                        _ => Result(GenTreeNodeKind.ROL, "ROL", start)
+                    },
+                    'T' => (start[3]) switch
+                    {
+                        'F' => Result(GenTreeNodeKind.RETFILT, "RETFILT", start),
+                        'U' => (start[6]) switch
+                        {
+                            'T' => Result(GenTreeNodeKind.RETURNTRAP, "RETURNTRAP", start),
+                            _ => Result(GenTreeNodeKind.RETURN, "RETURN", start)
+                        },
+                        _ => Result(GenTreeNodeKind.RET_EXPR, "RET_EXPR", start)
+                    },
+                    'R' => Result(GenTreeNodeKind.ROR, "ROR", start),
+                    'H' => (start[3]) switch
+                    {
+                        '_' => Result(GenTreeNodeKind.RSH_LO, "RSH_LO", start),
+                        _ => Result(GenTreeNodeKind.RSH, "RSH", start)
+                    },
+                    'Z' => Result(GenTreeNodeKind.RSZ, "RSZ", start),
+                    _ => Result(GenTreeNodeKind.RUNTIMELOOKUP, "RUNTIMELOOKUP", start)
+                },
+                'S' => (start[1]) switch
+                {
+                    'E' => Result(GenTreeNodeKind.SETCC, "SETCC", start),
+                    'I' => (start[4]) switch
+                    {
+                        '_' => Result(GenTreeNodeKind.SIMD_CHK, "SIMD_CHK", start),
+                        _ => Result(GenTreeNodeKind.SIMD, "SIMD", start)
+                    },
+                    'T' => (start[7]) switch
+                    {
+                        'O' => Result(GenTreeNodeKind.START_NONGC, "START_NONGC", start),
+                        'R' => Result(GenTreeNodeKind.START_PREEMPTGC, "START_PREEMPTGC", start),
+                        'D' => Result(GenTreeNodeKind.STOREIND, "STOREIND", start),
+                        'L' => Result(GenTreeNodeKind.STORE_BLK, "STORE_BLK", start),
+                        'Y' => Result(GenTreeNodeKind.STORE_DYN_BLK, "STORE_DYN_BLK", start),
+                        'C' => (start[10]) switch
+                        {
+                            'F' => Result(GenTreeNodeKind.STORE_LCL_FLD, "STORE_LCL_FLD", start),
+                            _ => Result(GenTreeNodeKind.STORE_LCL_VAR, "STORE_LCL_VAR", start)
+                        },
+                        _ => Result(GenTreeNodeKind.STORE_OBJ, "STORE_OBJ", start)
+                    },
+                    'U' => (start[3]) switch
+                    {
+                        '_' => (start[4]) switch
+                        {
+                            'H' => Result(GenTreeNodeKind.SUB_HI, "SUB_HI", start),
+                            _ => Result(GenTreeNodeKind.SUB_LO, "SUB_LO", start)
+                        },
+                        _ => Result(GenTreeNodeKind.SUB, "SUB", start)
+                    },
+                    _ => (start[2]) switch
+                    {
+                        'A' => Result(GenTreeNodeKind.SWAP, "SWAP", start),
+                        _ => (start[6]) switch
+                        {
+                            '_' => Result(GenTreeNodeKind.SWITCH_TABLE, "SWITCH_TABLE", start),
+                            _ => Result(GenTreeNodeKind.SWITCH, "SWITCH", start)
+                        }
+                    },
+                },
+                'T' => (start[5]) switch
+                {
+                    'E' => Result(GenTreeNodeKind.TEST_EQ, "TEST_EQ", start),
+                    'N' => Result(GenTreeNodeKind.TEST_NE, "TEST_NE", start),
+                    _ => Result(GenTreeNodeKind.TURE_ARG_SPLIT, "TURE_ARG_SPLIT", start)
+                },
+                'U' => (start[1]) switch
+                {
+                    'D' => Result(GenTreeNodeKind.UDIV, "UDIV", start),
+                    _ => Result(GenTreeNodeKind.UMOD, "UMOD", start)
+                },
+                _ => (start[1]) switch
+                {
+                    'A' => Result(GenTreeNodeKind.XADD, "XADD", start),
+                    'C' => Result(GenTreeNodeKind.XCHG, "XCHG", start),
+                    _ => Result(GenTreeNodeKind.XOR, "XOR", start)
+                }
+            };
+            
+            return Result<GenTreeNodeKind>(result, out width);
         }
     }
 }
