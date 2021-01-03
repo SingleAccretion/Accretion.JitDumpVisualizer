@@ -86,5 +86,9 @@
         GenTreeNodeNullcheck,
         GenTreeNodeHelper,
         StatementDetalizationState,
+        GenTreeArgumentWithInfo,
+        GenTreeThisArgumentWithInfo,
+        GenTreeArgumentInfoSetup,
+        GenTreeArgumentInfoRegister,
     }
 }

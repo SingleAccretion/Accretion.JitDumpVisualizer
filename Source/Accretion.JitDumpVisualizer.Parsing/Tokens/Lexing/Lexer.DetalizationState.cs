@@ -7,23 +7,20 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
     {
         public static DetalizationState ParseStatementDetalizationState(char* start, out int width)
         {
-            Assert.True(Unsafe.SizeOf<DetalizationState>() is 1);
+            Assert.True(Unsafe.SizeOf<DetalizationState>() is 4);
 
-            ulong result;
-            switch (start[1])
+            if (start[1] is 'a')
             {
-                case 'a':
-                    Assert.Equal(start, "(after)");
-                    result = (ulong)DetalizationState.Before | ((ulong)"(after)".Length << (sizeof(DetalizationState) * 8));
-                    break;
-                default:
-                    Assert.Equal(start, "(before)");
-                    result = (ulong)DetalizationState.Before | ((ulong)"(before)".Length << (sizeof(DetalizationState) * 8));
-                    break;
+                Assert.Equal(start, "(after)");
+                width = "(after)".Length;
+                return DetalizationState.After;
             }
-
-            width = (int)(result >> (sizeof(DetalizationState) * 8));
-            return (DetalizationState)result;
+            else
+            {
+                Assert.Equal(start, "(before)");
+                width = "(before)".Length;
+                return DetalizationState.Before;
+            }
         }
     }
 }

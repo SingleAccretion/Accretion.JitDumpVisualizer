@@ -1,9 +1,11 @@
 ﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    public enum DetalizationState
+    public enum Register : byte
     {
         Unknown,
-        Before,
-        After
+        Rcx,
+        Rdx,
+        R8,
+        R9,
     }
 }

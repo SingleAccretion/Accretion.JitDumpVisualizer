@@ -201,46 +201,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     case TokenKind.StatementDetalizationState:
                     case TokenKind.StatementILRangeEnd:
                     StartGenTreeNodeDetalizationRow:
-                        switch (startCopy[0])
-                        {
-                            case 'N':
-                                Assert.FormatEqual(startCopy, "N000");
-                                kind = TokenKind.GenTreeLIRNode;
-                                rawValue = IntegersParser.ParseIntegerThreeDigits(startCopy + "N".Length);
-                                rawWidth = "N000".Length;
-                                break;
-                            case '[': goto ReturnGenTreeNodeId;
-                            default: goto ReturnUnknown;
-                        }
-                        break;
+                        tokens = ParseGenTreeNodeDetalization(ref start, tokens);
+                        continue;
 
-                    case TokenKind.GenTreeLIRNode:
-                        Assert.FormatEqual(startCopy, "(000,", valid: ' ');
-                        kind = TokenKind.GenTreeNodeEstimatedTime;
-                        rawValue = IntegersParser.ParseGenericInteger(startCopy + "(".Length, out _);
-                        rawWidth = "(000,".Length;
-                        break;
-
-                    case TokenKind.GenTreeNodeEstimatedTime:
-                        kind = TokenKind.GenTreeNodeEstimatedCost;
-                        rawValue = IntegersParser.ParseGenericInteger(startCopy, out rawWidth);
-                        rawWidth += ")".Length;
-                        break;
-
-                    case TokenKind.GenTreeNodeEstimatedCost:
-                    ReturnGenTreeNodeId:
-                        Assert.FormatEqual(startCopy, "[000000]");
-                        kind = TokenKind.GenTreeNodeId;
-                        rawValue = IntegersParser.ParseIntegerSixDigits(startCopy + "[".Length);
-                        rawWidth = "[000000]".Length;
-                        break;
-
-                    case TokenKind.GenTreeNodeId:
-                        kind = TokenKind.GenTreeNodeFlags;
-                        rawValue = (uint)Lexer.ParseGenTreeNodeFlags(startCopy);
-                        rawWidth = "------------".Length;
-                        break;
-
+                    case TokenKind.GenTreeArgumentInfoSetup:
+                    case TokenKind.GenTreeArgumentInfoRegister:
                     case TokenKind.GenTreeNodeFlags:
                         switch (startCopy[0])
                         {
@@ -607,7 +572,52 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         private static Token* ParseGenTreeNodeDetalization(ref char* start, Token* tokens)
         {
+            if (*start is 'N')
+            {
+                Assert.FormatEqual(start, "N000");
+                tokens = Store(tokens, TokenKind.GenTreeLIRNode, IntegersParser.ParseIntegerThreeDigits(start + 1));
+                start += 6;
+                Assert.FormatEqual(start, "(000,000)", valid: ' ');
+                tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedTime, IntegersParser.ParseGenericInteger(start, out _));
+                start += 4;
+                tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedCost, IntegersParser.ParseGenericInteger(start, out _));
+                start += 5;
+            }
 
+            Assert.FormatEqual(start, "[000000]");
+            start++;
+            tokens = Store(tokens, TokenKind.GenTreeNodeId, IntegersParser.ParseIntegerSixDigits(start));
+            start += 8;
+            tokens = Store(tokens, TokenKind.GenTreeNodeFlags, (uint)Lexer.ParseGenTreeNodeFlags(start));
+            start += 13;
+
+            switch (*start)
+            {
+                case 't':
+                    Assert.Equal(start, "this");
+                    tokens = Store(tokens, TokenKind.GenTreeThisArgumentWithInfo);
+                    var width = 4;
+                    goto StoreArgumentInfo;
+                case 'a':
+                    tokens = Store(tokens, TokenKind.GenTreeArgumentWithInfo, PeekArgument(start, out width));
+                    goto StoreArgumentInfo;
+                StoreArgumentInfo:
+                    switch (start[width + 1])
+                    {
+                        case 'S':
+                            Assert.Equal(start + width + 1, "SETUP");
+                            tokens = Store(tokens, TokenKind.GenTreeArgumentInfoSetup);
+                            break;
+                        default:
+                            Assert.Equal(start + width + 1, "in");
+                            tokens = Store(tokens, TokenKind.GenTreeArgumentInfoRegister, (uint)Lexer.ParseRegister(start + width + 4, out _));
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            start += 14;
 
             return tokens;
         }
@@ -635,5 +645,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             Assert.FormatEqual(start, "STMT00000");
             return IntegersParser.ParseIntegerFiveDigits(start + 4);
         }
+
+        private static int PeekArgument(char* start, out int width)
+        {
+            Assert.Equal(start, "arg");
+            var index = IntegersParser.ParseGenericInteger(start + 3, out width);
+            width += 3;
+            return (int)index;
+        }
+
     }
 }
