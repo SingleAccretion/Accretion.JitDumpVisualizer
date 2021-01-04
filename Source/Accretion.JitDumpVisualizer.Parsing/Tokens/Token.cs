@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
+using System;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
@@ -14,6 +15,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         public Token(TokenKind kind, uint rawValue) => _token = (ulong)rawValue << 32 | (ulong)kind;
 
         public TokenKind Kind => (TokenKind)_token;
+
+        public GenTreeNodeType GenTreeNodeType
+        {
+            get
+            {
+                Assert.Equal(Kind, TokenKind.GenTreeNodeType);
+                return (GenTreeNodeType)RawValue;
+            }
+        }
+
         private uint RawValue => (uint)(_token >> 32);
 
         public override string? ToString()
@@ -39,10 +50,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeEstimatedCost or
                 TokenKind.GenTreeNodeId or
                 TokenKind.GenTreeNodeLocalVariableIndex or
-                TokenKind.GenTreeNodeTemporaryNumber or
-                TokenKind.GenTreeNodeArgumentNumber or
+                TokenKind.GenTreeNodeLocalVariableTemporaryNumber or
+                TokenKind.GenTreeNodeLocalVariableArgumentNumber or
                 TokenKind.GenTreeNodeUNumber or 
-                TokenKind.GenTreeNodeDNumber => RawValue,
+                TokenKind.GenTreeNodeDNumber or
+                TokenKind.GenTreeNodePadding => RawValue,
                 TokenKind.StatementDetalizationState => (DetalizationState)RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
                 TokenKind.BasicBlockJumpTargetKindInTable or 
@@ -53,6 +65,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeFlags => (GenTreeNodeFlags)RawValue,
                 TokenKind.GenTreeNodeKind => (GenTreeNodeKind)RawValue,
                 TokenKind.GenTreeNodeType => (GenTreeNodeType)RawValue,
+                TokenKind.GenTreeNodeConstantHandleKind => (GenTreeConstantHandleKind)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 TokenKind.BasicBlockILRangeStartInTable or
                 TokenKind.BasicBlockILRangeStartInTopHeader or

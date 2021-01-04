@@ -18,8 +18,7 @@ namespace Accretion.JitDumpVisualizer.Tests
         {
             fixed (char* start = str)
             {
-                var end = start + str.Length;
-                Xunit.Assert.Equal(expected, Count.OfLeading(start, end, character));
+                Xunit.Assert.Equal(expected, Count.OfLeading(start, character));
             }
         }
     }

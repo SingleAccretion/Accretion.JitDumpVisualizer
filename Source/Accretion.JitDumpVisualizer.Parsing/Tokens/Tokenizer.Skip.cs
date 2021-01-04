@@ -19,6 +19,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return start + (((nint)(*start) >> 1) & 0b11);
         }
 
+        private static char* SkipWhitespaces(char* start)
+        {
+            while (*start is ' ')
+            {
+                start++;
+            }
+
+            return start;
+        }
+
         private static bool IsNotEndOfLine(char* start)
         {
             if (*start is '\r' or '\n')

@@ -4,6 +4,7 @@
     <TargetFramework>net5</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
+    <NoWarn>@(NoWarn);xUnit1026</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

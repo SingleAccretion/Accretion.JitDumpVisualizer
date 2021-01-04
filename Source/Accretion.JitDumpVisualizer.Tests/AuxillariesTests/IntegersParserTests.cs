@@ -1,10 +1,8 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Tokens;
-using System.Diagnostics.CodeAnalysis;
 using Xunit;
 
 namespace Accretion.JitDumpVisualizer.Tests
 {
-    [SuppressMessage("Usage", "xUnit1026:Theory methods should use all of their parameters", Justification = "False positive.")]
     public unsafe class IntegersParserTests
     {
         [InlineData("0000", 0)]
@@ -16,7 +14,7 @@ namespace Accretion.JitDumpVisualizer.Tests
         [InlineData("6070", 6070)]
         [InlineData("8907", 8907)]
         [Theory]
-        public void ParsesFourDigitIntegersCorrectly(string str, int expected)
+        public void ParsesFourDigitIntegersCorrectly(string str, uint expected)
         {
             fixed (char* ptr = str)
             {
@@ -33,7 +31,7 @@ namespace Accretion.JitDumpVisualizer.Tests
         [InlineData("70", 70)]
         [InlineData("99", 99)]
         [Theory]
-        public void ParsesTwoDigitIntegersCorrectly(string str, int expected)
+        public void ParsesTwoDigitIntegersCorrectly(string str, uint expected)
         {
             fixed (char* ptr = str)
             {
@@ -51,7 +49,7 @@ namespace Accretion.JitDumpVisualizer.Tests
         [InlineData("8907", 8907, 4)]
         [InlineData("    1", 1, 5)]
         [Theory]
-        public void ParsesGenericIntegersCorrectly(string str, int expected, int expectedWidth)
+        public void ParsesGenericIntegersCorrectly(string str, uint expected, int expectedWidth)
         {
             fixed (char* ptr = str)
             {

@@ -1,5 +1,6 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Tokens;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -21,10 +22,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         [Conditional(DebugMode)]
         public static void Equal(char* start, string expected, string? message = null) =>
-            True(new string(start, 0, expected.Length) == expected, $"Unexpected string '{Expand(start)}'.\r\nExpected: '{expected}'");
+            Equal(new string(start, 0, expected.Length), expected, $"Unexpected string: '{Expand(start)}'.\r\nExpected: '{expected}'");
 
         [Conditional(DebugMode)]
-        public static void FormatEqual(char* start, string expected, string? message = null, bool hex = false, char wildcard = '0', params char[] valid)
+        public static void Equal<T>(T actual, T expected, string? message = null) =>
+            True(EqualityComparer<T>.Default.Equals(actual, expected), message ?? $"Unexpected {typeof(T).Name}: '{actual}'.\r\nExpected: '{expected}'");
+
+        [Conditional(DebugMode)]
+        public static void FormatEqual(char* start, string expected, bool hex = false, char wildcard = '0', params char[] valid)
         {
             var builder = new StringBuilder();
             for (int i = 0; i < expected.Length; i++)
