@@ -20,7 +20,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             get
             {
-                Assert.Equal(Kind, TokenKind.GenTreeNodeType);
+                Assert.Equal(Kind, TokenKind.GenTreeNodeType, TokenKind.GenTreeNodeCastType);
                 return (GenTreeNodeType)RawValue;
             }
         }
@@ -45,7 +45,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.BasicBlockHandleCountInTable or
                 TokenKind.BasicBlockPredInTopHeader or
                 TokenKind.BasicBlockSuccInTopHeader or
-                TokenKind.GenTreeLIRNode or
+                TokenKind.GenTreeNodeSequenceNumber or
                 TokenKind.GenTreeNodeEstimatedTime or
                 TokenKind.GenTreeNodeEstimatedCost or
                 TokenKind.GenTreeNodeId or
@@ -55,6 +55,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeUNumber or 
                 TokenKind.GenTreeNodeDNumber or
                 TokenKind.GenTreeNodePadding => RawValue,
+                TokenKind.GenTreeNodeArgumentInfoRegister => (Register)RawValue,
                 TokenKind.StatementDetalizationState => (DetalizationState)RawValue,
                 TokenKind.BasicBlockWeightInTable => BitConverter.Int32BitsToSingle((int)RawValue),
                 TokenKind.BasicBlockJumpTargetKindInTable or 
@@ -64,8 +65,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.StartingFunction => (RyuJitFunction)RawValue,
                 TokenKind.GenTreeNodeFlags => (GenTreeNodeFlags)RawValue,
                 TokenKind.GenTreeNodeKind => (GenTreeNodeKind)RawValue,
-                TokenKind.GenTreeNodeType => (GenTreeNodeType)RawValue,
-                TokenKind.GenTreeNodeConstantHandleKind => (GenTreeConstantHandleKind)RawValue,
+                TokenKind.GenTreeNodeType or TokenKind.GenTreeNodeCastType => GenTreeNodeType,
+                TokenKind.GenTreeNodeConstantIconHandle => (GenTreeConstantIconHandle)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 TokenKind.BasicBlockILRangeStartInTable or
                 TokenKind.BasicBlockILRangeStartInTopHeader or

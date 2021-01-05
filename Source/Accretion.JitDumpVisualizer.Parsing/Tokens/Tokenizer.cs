@@ -5,7 +5,6 @@ using Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
@@ -84,7 +83,11 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 uint rawValue = 0;
 
 #if DEBUG
-                if (!IsNotEndOfLine(start))
+                if (OperatingSystem.IsWindows())
+                {
+                    Assert.NotEqual(start, "\n");
+                }
+                if (IsEndOfLine(start))
                 {
                     start = SkipEndOfLine(start);
                     continue;
@@ -200,7 +203,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     #region Handling of basic block detalization
                     case TokenKind.StatementDetalizationState:
                     case TokenKind.StatementILRangeEnd:
-                    StartGenTreeNodeDetalizationRow:
+                    case TokenKind.BasicBlockInInnerHeader:
+                    StartGenTreeNodeDetalization:
                         switch (*start)
                         {
                             case '[' or 'N':
@@ -208,33 +212,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 continue;
                             default: goto UnstructuredData;
                         }
-
-                    case TokenKind.GenTreeNodeType:
-                        switch (startCopy[0])
-                        {
-                            case '(':
-                                switch (startCopy[1])
-                                {
-                                    case 'i':
-                                        switch (startCopy[3])
-                                        {
-                                            default:
-                                                Assert.Equal(startCopy, "(init)");
-                                                kind = TokenKind.GenTreeNodeIsInit;
-                                                rawWidth = "(init)".Length;
-                                                break;
-                                        }
-                                        break;
-                                    default:
-                                        Assert.Equal(startCopy, "(copy)");
-                                        kind = TokenKind.GenTreeNodeIsCopy;
-                                        rawWidth = "(copy)".Length;
-                                        break;
-                                }
-                                break;
-                            default: goto StartGenTreeNodeDetalizationRow;
-                        }
-                        break;
 
                     case TokenKind.GenTreeNodeLocalVariableTemporaryNumber:
                     case TokenKind.GenTreeNodeLocalVariableArgumentNumber:
@@ -252,20 +229,28 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                                 rawValue = IntegersParser.ParseGenericInteger(startCopy + "u:".Length, out rawWidth);
                                 rawWidth += "u:".Length;
                                 break;
-                            default: goto StartGenTreeNodeDetalizationRow;
+                            default: goto StartGenTreeNodeDetalization;
                         }
                         break;
 
+                    // Potential enhancement: emit a shadow token and switch on that
                     case TokenKind.GenTreeNodeUNumber:
                     case TokenKind.GenTreeNodeDNumber:
-                    case TokenKind.GenTreeNodeIsInit:
+                    case TokenKind.GenTreeNodeAssignmentIsCopy:
                     case TokenKind.GenTreeNodeIsCopy:
                     case TokenKind.GenTreeNodeIsInlineReturn:
+                    case TokenKind.GenTreeNodeType:
+                    case TokenKind.GenTreeNodeCastType:
                     case TokenKind.GenTreeNodeTypeName:
                     case TokenKind.GenTreeNodeMethodName:
+                    case TokenKind.GenTreeNodeFieldName:
                     case TokenKind.GenTreeNodeMethodHandle:
                     case TokenKind.GenTreeNodeHelperMethod:
-                        goto StartGenTreeNodeDetalizationRow;
+                    case TokenKind.GenTreeNodeIntegerConstant:
+                    case TokenKind.GenTreeNodeIntegerConstantNull:
+                    case TokenKind.GenTreeNodeLargeIntegerConstant:
+                    case TokenKind.GenTreeNodeConstantIconHandle:
+                        goto StartGenTreeNodeDetalization;
                     #endregion
 
                     #region Handling of unstructured data
@@ -478,9 +463,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             if (*start is 'N')
             {
                 Assert.FormatEqual(start, "N000");
-                tokens = Store(tokens, TokenKind.GenTreeLIRNode, IntegersParser.ParseIntegerThreeDigits(start + 1));
+                tokens = Store(tokens, TokenKind.GenTreeNodeSequenceNumber, IntegersParser.ParseIntegerThreeDigits(start + 1));
                 start += 6;
-                Assert.FormatEqual(start, "(000,000)", valid: ' ');
+                Assert.FormatEqual(start - 1, "(000,000)", valid: ' ');
                 tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedTime, IntegersParser.ParseGenericInteger(start, out _));
                 start += 4;
                 tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedCost, IntegersParser.ParseGenericInteger(start, out _));
@@ -523,8 +508,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                             break;
                     }
                     break;
-                default:
-                    break;
+                default: break;
             }
 
             start += 13;
@@ -547,13 +531,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     Assert.Equal(start - 1, "(h)");
                     start += 1;
                     break;
+                // The handling here is incomplete
+                // We're missing ind, stub, r2r_ind, and unmanaged calls
                 case 'n' when kind is GenTreeNodeKind.CALL:
                     Assert.Equal(start, "nullcheck");
                     tokens = Store(tokens, TokenKind.GenTreeNodeNullcheck);
                     start += 5;
                     break;
-                default:
-                    break;
+                default: break;
             }
 
             start += Math.Max(0, 9 - kindWidth);
@@ -563,13 +548,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             switch (kind)
             {
                 case GenTreeNodeKind.CNS_INT:
-                case GenTreeNodeKind.CNS_LNG:
+                    if (*start is 'n')
+                    {
+                        Assert.Equal(start, "null");
+                        tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantNull);
+                        start += 4;
+                        break;
+                    }
+
                     if (start[-10] is 'h')
                     {
                         Assert.FormatEqual(start, "0x00000000", hex: true);
                         tokens = Store(tokens, TokenKind.GenTreeNodeConstantHandle);
                         start += 11;
-                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantHandleKind, (uint)Lexer.ParseGenTreeConstantHandleKind(start, out var handleWidth));
+                        // Note: this doesn't handle literal constant strings: "Constant string"
+                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantIconHandle, (uint)Lexer.ParseGenTreeConstantIconHandle(start, out var handleWidth));
                         start += handleWidth;
                     }
                     else
@@ -582,18 +575,36 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         }
                         else
                         {
-                            if (*start is 'n')
-                            {
-                                Assert.Equal(start, "null");
-                                tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantNull);
-                                start += 4;
-                            }
-                            else
-                            {
-                                tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstant, IntegersParser.ParseGenericInteger(start, out var integerWidth));
-                                start += integerWidth;
-                            }
+                            // These are values between -1000 and 1000
+                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstant, IntegersParser.ParseGenericInteger(start, out var integerWidth));
+                            start += integerWidth;
                         }
+                    }
+
+                    switch (start[1])
+                    {
+                        case 'f':
+                            Assert.Equal(start + 1, "field offset");
+                            start += 13;
+                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantIsFieldSequenceOffset);
+                            break;
+                        case 'v':
+                            Assert.Equal(start + 1, "vector element count");
+                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantIsVectorElementCount);
+                            start += 20;
+                            break;
+                        case 'r':
+                            Assert.Equal(start + 1, "reuse reg val");
+                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantReuseRegisterValue);
+                            start += 13;
+                            break;
+                        default: break;
+                    }
+
+                    if (start[1] is 'F')
+                    {
+                        start += 1;
+                        tokens = ParseGenTreeNodeFieldSequence(ref start, tokens);
                     }
                     break;
                 case GenTreeNodeKind.CALL:
@@ -624,6 +635,37 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     if (tokens[-1].GenTreeNodeType is GenTreeNodeType.Struct)
                     {
                         tokens = StoreGenTreeTypeName(ref start, tokens);
+                        if (*start is '(')
+                        {
+                            switch (start[1])
+                            {
+                                case 'A':
+                                    Assert.Equal(start, "(AX)");
+                                    tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsAddressExposed);
+                                    start += 4;
+                                    break;
+                                case 'U':
+                                    Assert.Equal(start, "(U)");
+                                    tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsUnusedStruct);
+                                    start += 3;
+                                    break;
+                                default:
+                                    if (start[2] is '?')
+                                    {
+                                        Assert.Equal(start, "(P?!)");
+                                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStructBeingRewritten);
+                                        start += 5;
+                                    }
+                                    else
+                                    {
+                                        Assert.Equal(start, "(P)");
+                                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStruct);
+                                        start += 3;
+                                    }
+                                    break;
+                            }
+
+                        }
                         start += 1;
                     }
                     Assert.FormatEqual(start, "V00");
@@ -633,15 +675,22 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     switch (*start)
                     {
                         case 'a':
-                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableArgumentNumber, PeekArgument(start, out var argumentWidth));
-                            start += argumentWidth;
+                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableArgumentNumber, PeekArgument(start, out _));
+                            start += 13;
                             break;
                         default:
                             Assert.FormatEqual(start, "tmp0");
                             start += 3;
-                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableTemporaryNumber, IntegersParser.ParseGenericInteger(start, out var tempWidth));
-                            start += tempWidth;
+                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableTemporaryNumber, IntegersParser.ParseGenericInteger(start, out _));
+                            start += 10;
                             break;
+                    }
+                    if (start[1] is 'Z')
+                    {
+                        Assert.Equal(start + 1, "Zero");
+                        start += 6;
+                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableHasZeroOffsetFieldSequence);
+                        tokens = ParseGenTreeNodeFieldSequence(ref start, tokens);
                     }
                     break;
                 case GenTreeNodeKind.RET_EXPR:
@@ -650,9 +699,65 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     tokens = Store(tokens, TokenKind.GenTreeNodeIsInlineReturn, IntegersParser.ParseIntegerSixDigits(start));
                     start += 8;
                     break;
+                case GenTreeNodeKind.FIELD:
+                    tokens = Store(tokens, TokenKind.GenTreeNodeFieldName, ParseGenTreeNodeFieldName(start, out var nameWidth, '\r', '\n').Value);
+                    start += nameWidth;
+                    break;
+                case GenTreeNodeKind.ASG:
+                    switch (start[1])
+                    {
+                        case 'i':
+                            Assert.Equal(start, "(init)");
+                            tokens = Store(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
+                            start += 6;
+                            break;
+                        case 'c':
+                            Assert.Equal(start, "(copy)");
+                            tokens = Store(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
+                            start += 6;
+                            break;
+                        default: goto Backtrack;
+                    }
+                    break;
+                case GenTreeNodeKind.CAST:
+                    while (start[-3] is '<')
+                    {
+                        Assert.Equal(start - 3, "<-");
+                        tokens = Store(tokens, TokenKind.GenTreeNodeCastType, (uint)Lexer.ParseGenTreeNodeType(start, out var typeWidth));
+                        start += typeWidth + 4;
+                    }
+                    start -= 4;
+                    break;
                 default:
+                Backtrack:
+                    start -= 1;
                     break;
             }
+
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal(start, "\r");
+            }
+            else
+            {
+                Assert.Equal(start, "\n");
+            }
+
+            return tokens;
+        }
+
+        private static Token* ParseGenTreeNodeFieldSequence(ref char* start, Token* tokens)
+        {
+            Assert.Equal(start, "Fseq[");
+            start += 5;
+            while (start[-2] is not ']')
+            {
+                var name = ParseGenTreeNodeFieldName(start, out var width, ',', ']').Value;
+                tokens = Store(tokens, TokenKind.GenTreeNodeFieldName, name);
+                start += width + 2;
+            }
+            start -= 1;
+            Assert.Equal(start - 1, "]");
 
             return tokens;
         }
@@ -705,12 +810,21 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         private static MethodNameHandle ParseGenTreeNodeMethodName(char* start, out int width)
         {
             // Technically UB
-            var index = new Span<char>(start, int.MaxValue).IndexOf(' ');
+            var index = new Span<char>(start, int.MaxValue).IndexOfAny(' ', '\r', '\n');
 
             width = index;
 
             // We do not have an implementation for string pools yet
             return new MethodNameHandle(0);
+        }
+
+        private static FieldNameHandle ParseGenTreeNodeFieldName(char* start, out int width, char endCharOne, char endCharTwo)
+        {
+            // Technically UB
+            var index = new Span<char>(start, int.MaxValue).IndexOfAny(endCharOne, endCharTwo);
+            width = index;
+
+            return new FieldNameHandle(0);
         }
 
         private static LargeIntegerHandle ParseLargeHexInteger(char* start, out int width)

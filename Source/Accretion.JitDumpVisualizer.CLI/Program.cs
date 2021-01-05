@@ -19,7 +19,7 @@ namespace Accretion.JitDumpVisualizer.CLI
         static void Main(string[] args)
         {
 #if RELEASE
-            BenchmarkRunner.Run<IndexOfBenchmarks>();
+            BenchmarkRunner.Run<LexerBenchmarks>();
             return;
             
             MeasureNextThroughput();

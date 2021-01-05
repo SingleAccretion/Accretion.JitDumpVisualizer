@@ -1,5 +1,4 @@
 ﻿using Accretion.JitDumpVisualizer.Parsing.Auxiliaries;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
@@ -8,215 +7,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
     {
         public static RyuJitHelperMethod ParseRyuJitHelperMethod(char* start, out int width)
         {
-            Assert.True(Unsafe.SizeOf<RyuJitHelperMethod>() is 1);
-
-            Assert.Equal(start, "HELPER.CORINFO_HELP_");
-            start += 20;
-            var result = (start[0]) switch
+            // We have to use another method so that the Jit inlines and folds all Result() calls
+            static ulong ParseRyuJitHelperMethod(char* start) => (*start) switch
             {
-                'A' => start[7] switch
-                {
-                    'E' => Result(RyuJitHelperMethod.ARE_TYPES_EQUIVALENT, "ARE_TYPES_EQUIVALENT", start),
-                    '_' => Result(RyuJitHelperMethod.ARRADDR_ST, "ARRADDR_ST", start),
-                    'B' => Result(RyuJitHelperMethod.ASSIGN_BYREF, "ASSIGN_BYREF", start),
-                    'R' => start[10] switch
-                    {
-                        '_' => start[12] switch
-                        {
-                            'A' => Result(RyuJitHelperMethod.ASSIGN_REF_EAX, "ASSIGN_REF_EAX", start),
-                            'B' => start[13] switch
-                            {
-                                'P' => Result(RyuJitHelperMethod.ASSIGN_REF_EBP, "ASSIGN_REF_EBP", start),
-                                _ => Result(RyuJitHelperMethod.ASSIGN_REF_EBX, "ASSIGN_REF_EBX", start)
-                            },
-                            'C' => Result(RyuJitHelperMethod.ASSIGN_REF_ECX, "ASSIGN_REF_ECX", start),
-                            'D' => Result(RyuJitHelperMethod.ASSIGN_REF_EDI, "ASSIGN_REF_EDI", start),
-                            'N' => Result(RyuJitHelperMethod.ASSIGN_REF_ENSURE_NONHEAP, "ASSIGN_REF_ENSURE_NONHEAP", start),
-                            _ => Result(RyuJitHelperMethod.ASSIGN_REF_ESI, "ASSIGN_REF_ESI", start)
-                        },
-                        _ => Result(RyuJitHelperMethod.ASSIGN_REF, "ASSIGN_REF", start)
-                    },
-                    _ => Result(RyuJitHelperMethod.ASSIGN_STRUCT, "ASSIGN_STRUCT", start)
-                },
-                'B' => start[2] switch
-                {
-                    'T' => Result(RyuJitHelperMethod.BBT_FCN_ENTER, "BBT_FCN_ENTER", start),
-                    _ => start[3] switch
-                    {
-                        '_' => Result(RyuJitHelperMethod.BOX_NULLABLE, "BOX_NULLABLE", start),
-                        _ => Result(RyuJitHelperMethod.BOX, "BOX", start)
-                    }
-                },
-                'C' => start[6] switch
-                {
-                    'D' => start[18] switch
-                    {
-                        '_' => start[20] switch
-                        {
-                            'A' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EAX, "CHECKED_ASSIGN_REF_EAX", start),
-                            'B' => start[21] switch
-                            {
-                                'P' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EBP, "CHECKED_ASSIGN_REF_EBP", start),
-                                _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EBX, "CHECKED_ASSIGN_REF_EBX", start),
-                            },
-                            'C' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_ECX, "CHECKED_ASSIGN_REF_ECX", start),
-                            'D' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EDI, "CHECKED_ASSIGN_REF_EDI", start),
-                            _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_ESI, "CHECKED_ASSIGN_REF_ESI", start)
-
-                        },
-                        _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF, "CHECKED_ASSIGN_REF", start)
-                    },
-                    'O' => Result(RyuJitHelperMethod.CHECK_OBJ, "CHECK_OBJ", start),
-                    'T' => start[9] switch
-                    {
-                        'Y' => Result(RyuJitHelperMethod.CHKCASTANY, "CHKCASTANY", start),
-                        'R' => Result(RyuJitHelperMethod.CHKCASTARRAY, "CHKCASTARRAY", start),
-                        'A' => start[12] switch
-                        {
-                            '_' => Result(RyuJitHelperMethod.CHKCASTCLASS_SPECIAL, "CHKCASTCLASS_SPECIAL", start),
-                            _ => Result(RyuJitHelperMethod.CHKCASTCLASS, "CHKCASTCLASS", start)
-                        },
-                        _ => Result(RyuJitHelperMethod.CHKCASTINTERFACE, "CHKCASTINTERFACE", start)
-                    },
-                    'N' => Result(RyuJitHelperMethod.CLASSINIT_SHARED_DYNAMICCLASS, "CLASSINIT_SHARED_DYNAMICCLASS", start),
-                    'R' => Result(RyuJitHelperMethod.CLASSPROFILE, "CLASSPROFILE", start),
-                    _ => Result(RyuJitHelperMethod.CLASS_ACCESS_EXCEPTION, "CLASS_ACCESS_EXCEPTION", start),
-                },
-                'D' => start[2] switch
-                {
-                    'G' => Result(RyuJitHelperMethod.DBG_IS_JUST_MY_CODE, "DBG_IS_JUST_MY_CODE", start),
-                    'L' => start[4] switch
-                    {
-                        'I' => start[7] switch
-                        {
-                            '_' => Result(RyuJitHelperMethod.DBL2INT_OVF, "DBL2INT_OVF", start),
-                            _ => Result(RyuJitHelperMethod.DBL2INT, "DBL2INT", start)
-                        },
-                        'L' => start[7] switch
-                        {
-                            '_' => Result(RyuJitHelperMethod.DBL2LNG_OVF, "DBL2LNG_OVF", start),
-                            _ => Result(RyuJitHelperMethod.DBL2LNG, "DBL2LNG", start)
-                        },
-                        'U' => start[5] switch
-                        {
-                            'I' => start[8] switch
-                            {
-                                '_' => Result(RyuJitHelperMethod.DBL2UINT_OVF, "DBL2UINT_OVF", start),
-                                _ => Result(RyuJitHelperMethod.DBL2UINT, "DBL2UINT", start)
-                            },
-                            _ => start[8] switch
-                            {
-                                '_' => Result(RyuJitHelperMethod.DBL2ULNG_OVF, "DBL2ULNG_OVF", start),
-                                _ => Result(RyuJitHelperMethod.DBL2ULNG, "DBL2ULNG", start),
-                            }
-                        },
-                        'E' => Result(RyuJitHelperMethod.DBLREM, "DBLREM", start),
-                        _ => Result(RyuJitHelperMethod.DBLROUND, "DBLROUND", start)
-                    },
-                    'B' => Result(RyuJitHelperMethod.DEBUG_LOG_LOOP_CLONING, "DEBUG_LOG_LOOP_CLONING", start),
-                    _ => Result(RyuJitHelperMethod.DIV, "DIV", start)
-                },
-                'E' => start[6] switch
-                {
-                    'E' => Result(RyuJitHelperMethod.EE_EXTERNAL_FIXUP, "EE_EXTERNAL_FIXUP", start),
-                    'S' => start[10] switch
-                    {
-                        'L' => start[22] switch
-                        {
-                            '_' => Result(RyuJitHelperMethod.EE_PERSONALITY_ROUTINE_FILTER_FUNCLET, "EE_PERSONALITY_ROUTINE_FILTER_FUNCLET", start),
-                            _ => Result(RyuJitHelperMethod.EE_PERSONALITY_ROUTINE, "EE_PERSONALITY_ROUTINE", start),
-                        },
-                        _ => Result(RyuJitHelperMethod.EE_PRESTUB, "EE_PRESTUB", start),
-                    },
-                    'V' => Result(RyuJitHelperMethod.EE_PINVOKE_FIXUP, "EE_PINVOKE_FIXUP", start),
-                    'O' => Result(RyuJitHelperMethod.EE_REMOTING_THUNK, "EE_REMOTING_THUNK", start),
-                    '_' => Result(RyuJitHelperMethod.EE_VSD_FIXUP, "EE_VSD_FIXUP", start),
-                    'B' => Result(RyuJitHelperMethod.EE_VTABLE_FIXUP, "EE_VTABLE_FIXUP", start),
-                    _ => start[7] switch
-                    {
-                        'O' => Result(RyuJitHelperMethod.EE_PRECODE_FIXUP, "EE_PRECODE_FIXUP", start),
-                        _ => Result(RyuJitHelperMethod.ENDCATCH, "ENDCATCH", start)
-                    }
-                },
-                'F' => start[5] switch
-                {
-                    'F' => Result(RyuJitHelperMethod.FAIL_FAST, "FAIL_FAST", start),
-                    'D' => Result(RyuJitHelperMethod.FIELDDESC_TO_STUBRUNTIMEFIELD, "FIELDDESC_TO_STUBRUNTIMEFIELD", start),
-                    '_' => Result(RyuJitHelperMethod.FIELD_ACCESS_EXCEPTION, "FIELD_ACCESS_EXCEPTION", start),
-                    'M' => Result(RyuJitHelperMethod.FLTREM, "FLTREM", start),
-                    _ => Result(RyuJitHelperMethod.FLTROUND, "FLTROUND", start)
-                },
-                'G' => start[8] switch
-                {
-                    'F' => start[9] switch
-                    {
-                        'L' => Result(RyuJitHelperMethod.GETFIELDFLOAT, "GETFIELDFLOAT", start),
-                        _ => Result(RyuJitHelperMethod.GETCLASSFROMMETHODPARAM, "GETCLASSFROMMETHODPARAM", start)
-                    },
-                    'N' => Result(RyuJitHelperMethod.GETCURRENTMANAGEDTHREADID, "GETCURRENTMANAGEDTHREADID", start),
-                    '1' => Result(RyuJitHelperMethod.GETFIELD16, "GETFIELD16", start),
-                    '3' => Result(RyuJitHelperMethod.GETFIELD32, "GETFIELD32", start),
-                    '6' => Result(RyuJitHelperMethod.GETFIELD64, "GETFIELD64", start),
-                    '8' => Result(RyuJitHelperMethod.GETFIELD8, "GETFIELD8", start),
-                    'A' => Result(RyuJitHelperMethod.GETFIELDADDR, "GETFIELDADDR", start),
-                    'O' => Result(RyuJitHelperMethod.GETFIELDOBJ, "GETFIELDOBJ", start),
-                    'S' => Result(RyuJitHelperMethod.GETFIELDSTRUCT, "GETFIELDSTRUCT", start),
-                    'I' => start[18] switch
-                    {
-                        'I' => Result(RyuJitHelperMethod.GETGENERICS_GCSTATIC_BASE, "GETGENERICS_GCSTATIC_BASE", start),
-                        'A' => Result(RyuJitHelperMethod.GETGENERICS_GCTHREADSTATIC_BASE, "GETGENERICS_GCTHREADSTATIC_BASE", start),
-                        'T' => Result(RyuJitHelperMethod.GETGENERICS_NONGCSTATIC_BASE, "GETGENERICS_NONGCSTATIC_BASE", start),
-                        _ => Result(RyuJitHelperMethod.GETGENERICS_NONGCTHREADSTATIC_BASE, "GETGENERICS_NONGCTHREADSTATIC_BASE", start)
-                    },
-                    'Y' => Result(RyuJitHelperMethod.GETREFANY, "GETREFANY", start),
-                    'D' => start[9] switch
-                    {
-                        'O' => Result(RyuJitHelperMethod.GETFIELDDOUBLE, "GETFIELDDOUBLE", start),
-                        _ => start[23] switch
-                        {
-                            '_' => start[24] switch
-                            {
-                                'D' => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE_DYNAMICCLASS, "GETSHARED_GCSTATIC_BASE_DYNAMICCLASS", start),
-                                _ => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE_NOCTOR, "GETSHARED_GCSTATIC_BASE_NOCTOR", start),
-                            },
-                            'C' => start[29] switch
-                            {
-                                '_' => start[30] switch
-                                {
-                                    'D' => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE_DYNAMICCLASS, "GETSHARED_GCTHREADSTATIC_BASE_DYNAMICCLASS", start),
-                                    _ => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE_NOCTOR, "GETSHARED_GCTHREADSTATIC_BASE_NOCTOR", start)
-                                },
-                                _ => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE, "GETSHARED_GCTHREADSTATIC_BASE", start)
-                            },
-                            'A' => start[26] switch
-                            {
-                                '_' => start[27] switch
-                                {
-                                    'D' => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE_DYNAMICCLASS, "GETSHARED_NONGCSTATIC_BASE_DYNAMICCLASS", start),
-                                    _ => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE_NOCTOR, "GETSHARED_NONGCSTATIC_BASE_NOCTOR", start),
-                                },
-                                'C' => start[32] switch
-                                {
-                                    '_' => start[33] switch
-                                    {
-                                        'D' => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE_DYNAMICCLASS, "GETSHARED_NONGCTHREADSTATIC_BASE_DYNAMICCLASS", start),
-                                        _ => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE_NOCTOR, "GETSHARED_NONGCTHREADSTATIC_BASE_NOCTOR", start),
-                                    },
-                                    _ => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE, "GETSHARED_NONGCTHREADSTATIC_BASE", start)
-                                },
-                                _ => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE, "GETSHARED_NONGCSTATIC_BASE", start)
-                            },
-                            _ => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE, "GETSHARED_GCSTATIC_BASE", start)
-                        }
-                    },
-                    'C' => start[19] switch
-                    {
-                        'C' => Result(RyuJitHelperMethod.GETSTATICFIELDADDR_CONTEXT, "GETSTATICFIELDADDR_CONTEXT", start),
-                        _ => Result(RyuJitHelperMethod.GETSTATICFIELDADDR_TLS, "GETSTATICFIELDADDR_TLS", start),
-                    },
-                    'R' => Result(RyuJitHelperMethod.GETSYNCFROMCLASSHANDLE, "GETSYNCFROMCLASSHANDLE", start),
-                    _ => Result(RyuJitHelperMethod.GVMLOOKUP_FOR_SLOT, "GVMLOOKUP_FOR_SLOT", start)
-                },
                 'I' => start[4] switch
                 {
                     'C' => Result(RyuJitHelperMethod.INITCLASS, "INITCLASS", start),
@@ -431,6 +224,218 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing
                     'E' => Result(RyuJitHelperMethod.VERIFICATION, "VERIFICATION", start),
                     _ => Result(RyuJitHelperMethod.VIRTUAL_FUNC_PTR, "VIRTUAL_FUNC_PTR", start)
                 }
+            };
+
+            Assert.True(Unsafe.SizeOf<RyuJitHelperMethod>() is 1);
+
+            Assert.Equal(start, "HELPER.CORINFO_HELP_");
+            start += 20;
+            var result = (start[0]) switch
+            {
+                'A' => start[7] switch
+                {
+                    'E' => Result(RyuJitHelperMethod.ARE_TYPES_EQUIVALENT, "ARE_TYPES_EQUIVALENT", start),
+                    '_' => Result(RyuJitHelperMethod.ARRADDR_ST, "ARRADDR_ST", start),
+                    'B' => Result(RyuJitHelperMethod.ASSIGN_BYREF, "ASSIGN_BYREF", start),
+                    'R' => start[10] switch
+                    {
+                        '_' => start[12] switch
+                        {
+                            'A' => Result(RyuJitHelperMethod.ASSIGN_REF_EAX, "ASSIGN_REF_EAX", start),
+                            'B' => start[13] switch
+                            {
+                                'P' => Result(RyuJitHelperMethod.ASSIGN_REF_EBP, "ASSIGN_REF_EBP", start),
+                                _ => Result(RyuJitHelperMethod.ASSIGN_REF_EBX, "ASSIGN_REF_EBX", start)
+                            },
+                            'C' => Result(RyuJitHelperMethod.ASSIGN_REF_ECX, "ASSIGN_REF_ECX", start),
+                            'D' => Result(RyuJitHelperMethod.ASSIGN_REF_EDI, "ASSIGN_REF_EDI", start),
+                            'N' => Result(RyuJitHelperMethod.ASSIGN_REF_ENSURE_NONHEAP, "ASSIGN_REF_ENSURE_NONHEAP", start),
+                            _ => Result(RyuJitHelperMethod.ASSIGN_REF_ESI, "ASSIGN_REF_ESI", start)
+                        },
+                        _ => Result(RyuJitHelperMethod.ASSIGN_REF, "ASSIGN_REF", start)
+                    },
+                    _ => Result(RyuJitHelperMethod.ASSIGN_STRUCT, "ASSIGN_STRUCT", start)
+                },
+                'B' => start[2] switch
+                {
+                    'T' => Result(RyuJitHelperMethod.BBT_FCN_ENTER, "BBT_FCN_ENTER", start),
+                    _ => start[3] switch
+                    {
+                        '_' => Result(RyuJitHelperMethod.BOX_NULLABLE, "BOX_NULLABLE", start),
+                        _ => Result(RyuJitHelperMethod.BOX, "BOX", start)
+                    }
+                },
+                'C' => start[6] switch
+                {
+                    'D' => start[18] switch
+                    {
+                        '_' => start[20] switch
+                        {
+                            'A' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EAX, "CHECKED_ASSIGN_REF_EAX", start),
+                            'B' => start[21] switch
+                            {
+                                'P' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EBP, "CHECKED_ASSIGN_REF_EBP", start),
+                                _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EBX, "CHECKED_ASSIGN_REF_EBX", start),
+                            },
+                            'C' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_ECX, "CHECKED_ASSIGN_REF_ECX", start),
+                            'D' => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_EDI, "CHECKED_ASSIGN_REF_EDI", start),
+                            _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF_ESI, "CHECKED_ASSIGN_REF_ESI", start)
+
+                        },
+                        _ => Result(RyuJitHelperMethod.CHECKED_ASSIGN_REF, "CHECKED_ASSIGN_REF", start)
+                    },
+                    'O' => Result(RyuJitHelperMethod.CHECK_OBJ, "CHECK_OBJ", start),
+                    'T' => start[9] switch
+                    {
+                        'Y' => Result(RyuJitHelperMethod.CHKCASTANY, "CHKCASTANY", start),
+                        'R' => Result(RyuJitHelperMethod.CHKCASTARRAY, "CHKCASTARRAY", start),
+                        'A' => start[12] switch
+                        {
+                            '_' => Result(RyuJitHelperMethod.CHKCASTCLASS_SPECIAL, "CHKCASTCLASS_SPECIAL", start),
+                            _ => Result(RyuJitHelperMethod.CHKCASTCLASS, "CHKCASTCLASS", start)
+                        },
+                        _ => Result(RyuJitHelperMethod.CHKCASTINTERFACE, "CHKCASTINTERFACE", start)
+                    },
+                    'N' => Result(RyuJitHelperMethod.CLASSINIT_SHARED_DYNAMICCLASS, "CLASSINIT_SHARED_DYNAMICCLASS", start),
+                    'R' => Result(RyuJitHelperMethod.CLASSPROFILE, "CLASSPROFILE", start),
+                    _ => Result(RyuJitHelperMethod.CLASS_ACCESS_EXCEPTION, "CLASS_ACCESS_EXCEPTION", start),
+                },
+                'D' => start[2] switch
+                {
+                    'G' => Result(RyuJitHelperMethod.DBG_IS_JUST_MY_CODE, "DBG_IS_JUST_MY_CODE", start),
+                    'L' => start[4] switch
+                    {
+                        'I' => start[7] switch
+                        {
+                            '_' => Result(RyuJitHelperMethod.DBL2INT_OVF, "DBL2INT_OVF", start),
+                            _ => Result(RyuJitHelperMethod.DBL2INT, "DBL2INT", start)
+                        },
+                        'L' => start[7] switch
+                        {
+                            '_' => Result(RyuJitHelperMethod.DBL2LNG_OVF, "DBL2LNG_OVF", start),
+                            _ => Result(RyuJitHelperMethod.DBL2LNG, "DBL2LNG", start)
+                        },
+                        'U' => start[5] switch
+                        {
+                            'I' => start[8] switch
+                            {
+                                '_' => Result(RyuJitHelperMethod.DBL2UINT_OVF, "DBL2UINT_OVF", start),
+                                _ => Result(RyuJitHelperMethod.DBL2UINT, "DBL2UINT", start)
+                            },
+                            _ => start[8] switch
+                            {
+                                '_' => Result(RyuJitHelperMethod.DBL2ULNG_OVF, "DBL2ULNG_OVF", start),
+                                _ => Result(RyuJitHelperMethod.DBL2ULNG, "DBL2ULNG", start),
+                            }
+                        },
+                        'E' => Result(RyuJitHelperMethod.DBLREM, "DBLREM", start),
+                        _ => Result(RyuJitHelperMethod.DBLROUND, "DBLROUND", start)
+                    },
+                    'B' => Result(RyuJitHelperMethod.DEBUG_LOG_LOOP_CLONING, "DEBUG_LOG_LOOP_CLONING", start),
+                    _ => Result(RyuJitHelperMethod.DIV, "DIV", start)
+                },
+                'E' => start[6] switch
+                {
+                    'E' => Result(RyuJitHelperMethod.EE_EXTERNAL_FIXUP, "EE_EXTERNAL_FIXUP", start),
+                    'S' => start[10] switch
+                    {
+                        'L' => start[22] switch
+                        {
+                            '_' => Result(RyuJitHelperMethod.EE_PERSONALITY_ROUTINE_FILTER_FUNCLET, "EE_PERSONALITY_ROUTINE_FILTER_FUNCLET", start),
+                            _ => Result(RyuJitHelperMethod.EE_PERSONALITY_ROUTINE, "EE_PERSONALITY_ROUTINE", start),
+                        },
+                        _ => Result(RyuJitHelperMethod.EE_PRESTUB, "EE_PRESTUB", start),
+                    },
+                    'V' => Result(RyuJitHelperMethod.EE_PINVOKE_FIXUP, "EE_PINVOKE_FIXUP", start),
+                    'O' => Result(RyuJitHelperMethod.EE_REMOTING_THUNK, "EE_REMOTING_THUNK", start),
+                    '_' => Result(RyuJitHelperMethod.EE_VSD_FIXUP, "EE_VSD_FIXUP", start),
+                    'B' => Result(RyuJitHelperMethod.EE_VTABLE_FIXUP, "EE_VTABLE_FIXUP", start),
+                    _ => start[7] switch
+                    {
+                        'O' => Result(RyuJitHelperMethod.EE_PRECODE_FIXUP, "EE_PRECODE_FIXUP", start),
+                        _ => Result(RyuJitHelperMethod.ENDCATCH, "ENDCATCH", start)
+                    }
+                },
+                'F' => start[5] switch
+                {
+                    'F' => Result(RyuJitHelperMethod.FAIL_FAST, "FAIL_FAST", start),
+                    'D' => Result(RyuJitHelperMethod.FIELDDESC_TO_STUBRUNTIMEFIELD, "FIELDDESC_TO_STUBRUNTIMEFIELD", start),
+                    '_' => Result(RyuJitHelperMethod.FIELD_ACCESS_EXCEPTION, "FIELD_ACCESS_EXCEPTION", start),
+                    'M' => Result(RyuJitHelperMethod.FLTREM, "FLTREM", start),
+                    _ => Result(RyuJitHelperMethod.FLTROUND, "FLTROUND", start)
+                },
+                'G' => start[8] switch
+                {
+                    'F' => start[9] switch
+                    {
+                        'L' => Result(RyuJitHelperMethod.GETFIELDFLOAT, "GETFIELDFLOAT", start),
+                        _ => Result(RyuJitHelperMethod.GETCLASSFROMMETHODPARAM, "GETCLASSFROMMETHODPARAM", start)
+                    },
+                    'N' => Result(RyuJitHelperMethod.GETCURRENTMANAGEDTHREADID, "GETCURRENTMANAGEDTHREADID", start),
+                    '1' => Result(RyuJitHelperMethod.GETFIELD16, "GETFIELD16", start),
+                    '3' => Result(RyuJitHelperMethod.GETFIELD32, "GETFIELD32", start),
+                    '6' => Result(RyuJitHelperMethod.GETFIELD64, "GETFIELD64", start),
+                    '8' => Result(RyuJitHelperMethod.GETFIELD8, "GETFIELD8", start),
+                    'A' => Result(RyuJitHelperMethod.GETFIELDADDR, "GETFIELDADDR", start),
+                    'O' => Result(RyuJitHelperMethod.GETFIELDOBJ, "GETFIELDOBJ", start),
+                    'S' => Result(RyuJitHelperMethod.GETFIELDSTRUCT, "GETFIELDSTRUCT", start),
+                    'I' => start[18] switch
+                    {
+                        'I' => Result(RyuJitHelperMethod.GETGENERICS_GCSTATIC_BASE, "GETGENERICS_GCSTATIC_BASE", start),
+                        'A' => Result(RyuJitHelperMethod.GETGENERICS_GCTHREADSTATIC_BASE, "GETGENERICS_GCTHREADSTATIC_BASE", start),
+                        'T' => Result(RyuJitHelperMethod.GETGENERICS_NONGCSTATIC_BASE, "GETGENERICS_NONGCSTATIC_BASE", start),
+                        _ => Result(RyuJitHelperMethod.GETGENERICS_NONGCTHREADSTATIC_BASE, "GETGENERICS_NONGCTHREADSTATIC_BASE", start)
+                    },
+                    'Y' => Result(RyuJitHelperMethod.GETREFANY, "GETREFANY", start),
+                    'D' => start[9] switch
+                    {
+                        'O' => Result(RyuJitHelperMethod.GETFIELDDOUBLE, "GETFIELDDOUBLE", start),
+                        _ => start[23] switch
+                        {
+                            '_' => start[24] switch
+                            {
+                                'D' => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE_DYNAMICCLASS, "GETSHARED_GCSTATIC_BASE_DYNAMICCLASS", start),
+                                _ => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE_NOCTOR, "GETSHARED_GCSTATIC_BASE_NOCTOR", start),
+                            },
+                            'C' => start[29] switch
+                            {
+                                '_' => start[30] switch
+                                {
+                                    'D' => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE_DYNAMICCLASS, "GETSHARED_GCTHREADSTATIC_BASE_DYNAMICCLASS", start),
+                                    _ => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE_NOCTOR, "GETSHARED_GCTHREADSTATIC_BASE_NOCTOR", start)
+                                },
+                                _ => Result(RyuJitHelperMethod.GETSHARED_GCTHREADSTATIC_BASE, "GETSHARED_GCTHREADSTATIC_BASE", start)
+                            },
+                            'A' => start[26] switch
+                            {
+                                '_' => start[27] switch
+                                {
+                                    'D' => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE_DYNAMICCLASS, "GETSHARED_NONGCSTATIC_BASE_DYNAMICCLASS", start),
+                                    _ => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE_NOCTOR, "GETSHARED_NONGCSTATIC_BASE_NOCTOR", start),
+                                },
+                                'C' => start[32] switch
+                                {
+                                    '_' => start[33] switch
+                                    {
+                                        'D' => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE_DYNAMICCLASS, "GETSHARED_NONGCTHREADSTATIC_BASE_DYNAMICCLASS", start),
+                                        _ => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE_NOCTOR, "GETSHARED_NONGCTHREADSTATIC_BASE_NOCTOR", start),
+                                    },
+                                    _ => Result(RyuJitHelperMethod.GETSHARED_NONGCTHREADSTATIC_BASE, "GETSHARED_NONGCTHREADSTATIC_BASE", start)
+                                },
+                                _ => Result(RyuJitHelperMethod.GETSHARED_NONGCSTATIC_BASE, "GETSHARED_NONGCSTATIC_BASE", start)
+                            },
+                            _ => Result(RyuJitHelperMethod.GETSHARED_GCSTATIC_BASE, "GETSHARED_GCSTATIC_BASE", start)
+                        }
+                    },
+                    'C' => start[19] switch
+                    {
+                        'C' => Result(RyuJitHelperMethod.GETSTATICFIELDADDR_CONTEXT, "GETSTATICFIELDADDR_CONTEXT", start),
+                        _ => Result(RyuJitHelperMethod.GETSTATICFIELDADDR_TLS, "GETSTATICFIELDADDR_TLS", start),
+                    },
+                    'R' => Result(RyuJitHelperMethod.GETSYNCFROMCLASSHANDLE, "GETSYNCFROMCLASSHANDLE", start),
+                    _ => Result(RyuJitHelperMethod.GVMLOOKUP_FOR_SLOT, "GVMLOOKUP_FOR_SLOT", start)
+                },
+                _ => ParseRyuJitHelperMethod(start)
             };
 
             var helper = Result<RyuJitHelperMethod>(result, out width);

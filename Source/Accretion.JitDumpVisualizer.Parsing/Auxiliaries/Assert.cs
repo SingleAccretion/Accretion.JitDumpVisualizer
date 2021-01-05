@@ -22,11 +22,24 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         [Conditional(DebugMode)]
         public static void Equal(char* start, string expected, string? message = null) =>
-            Equal(new string(start, 0, expected.Length), expected, $"Unexpected string: '{Expand(start)}'.\r\nExpected: '{expected}'");
+            True(new string(start, 0, expected.Length) == expected, $"Unexpected string: '{Expand(start)}'.\r\nExpected: '{expected}'");
 
         [Conditional(DebugMode)]
-        public static void Equal<T>(T actual, T expected, string? message = null) =>
-            True(EqualityComparer<T>.Default.Equals(actual, expected), message ?? $"Unexpected {typeof(T).Name}: '{actual}'.\r\nExpected: '{expected}'");
+        public static void Equal<T>(T actual, params T[] expected)
+        {
+            var match = false;
+            foreach (var expectedItem in expected)
+            {
+                if (EqualityComparer<T>.Default.Equals(actual, expectedItem))
+                {
+                    match = true;
+                    break;
+                }
+            }
+
+            var expectedString = string.Join("\r\n", expected.Select(x => $"'{x}'"));
+            True(match, $"Unexpected {typeof(T).Name}: '{actual}'.\r\nExpected:{(expected.Length > 1 ? "\r\n" : " ")}{expectedString}");
+        }
 
         [Conditional(DebugMode)]
         public static void FormatEqual(char* start, string expected, bool hex = false, char wildcard = '0', params char[] valid)

@@ -6,6 +6,7 @@ namespace Accretion.JitDumpVisualizer.Tests.LexerTests
 {
     public unsafe class ParseRyuJitHelperTests
     {
+        [Theory]
         [InlineData("HELPER.CORINFO_HELP_ARE_TYPES_EQUIVALENT", RyuJitHelperMethod.ARE_TYPES_EQUIVALENT, 40)]
         [InlineData("HELPER.CORINFO_HELP_ARRADDR_ST", RyuJitHelperMethod.ARRADDR_ST, 30)]
         [InlineData("HELPER.CORINFO_HELP_ASSIGN_BYREF", RyuJitHelperMethod.ASSIGN_BYREF, 32)]
@@ -199,7 +200,6 @@ namespace Accretion.JitDumpVisualizer.Tests.LexerTests
         [InlineData("HELPER.CORINFO_HELP_USER_BREAKPOINT", RyuJitHelperMethod.USER_BREAKPOINT, 35)]
         [InlineData("HELPER.CORINFO_HELP_VERIFICATION", RyuJitHelperMethod.VERIFICATION, 32)]
         [InlineData("HELPER.CORINFO_HELP_VIRTUAL_FUNC_PTR", RyuJitHelperMethod.VIRTUAL_FUNC_PTR, 36)]
-        [Theory]
         public void ParsesKnownHelpersCorrectly(string str, RyuJitHelperMethod expectedHelper, int expectedWidth)
         {
             fixed (char* ptr = str)
