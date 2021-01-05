@@ -66,7 +66,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeFlags => (GenTreeNodeFlags)RawValue,
                 TokenKind.GenTreeNodeKind => (GenTreeNodeKind)RawValue,
                 TokenKind.GenTreeNodeType or TokenKind.GenTreeNodeCastType => GenTreeNodeType,
-                TokenKind.GenTreeNodeConstantIconHandle => (GenTreeConstantIconHandle)RawValue,
+                TokenKind.GenTreeNodeConstantIconHandle => (GenTreeNodeConstantIconHandle)RawValue,
                 TokenKind.InlineStartingAt => $"[{RawValue:000000}]",
                 TokenKind.BasicBlockILRangeStartInTable or
                 TokenKind.BasicBlockILRangeStartInTopHeader or

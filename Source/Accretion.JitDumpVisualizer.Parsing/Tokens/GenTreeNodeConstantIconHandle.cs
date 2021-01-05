@@ -1,6 +1,6 @@
 ﻿namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
-    public enum GenTreeConstantIconHandle : byte
+    public enum GenTreeNodeConstantIconHandle : byte
     {
         Unknown,
         Token,

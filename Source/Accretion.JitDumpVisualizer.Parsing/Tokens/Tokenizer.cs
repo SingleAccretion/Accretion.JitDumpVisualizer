@@ -532,7 +532,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     start += 1;
                     break;
                 // The handling here is incomplete
-                // We're missing ind, stub, r2r_ind, and unmanaged calls
+                // We're missing ind, stub, r2r_ind, unmanaged calls...
                 case 'n' when kind is GenTreeNodeKind.CALL:
                     Assert.Equal(start, "nullcheck");
                     tokens = Store(tokens, TokenKind.GenTreeNodeNullcheck);
@@ -562,7 +562,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         tokens = Store(tokens, TokenKind.GenTreeNodeConstantHandle);
                         start += 11;
                         // Note: this doesn't handle literal constant strings: "Constant string"
-                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantIconHandle, (uint)Lexer.ParseGenTreeConstantIconHandle(start, out var handleWidth));
+                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantIconHandle, (uint)Lexer.ParseGenTreeNodeConstantIconHandle(start, out var handleWidth));
                         start += handleWidth;
                     }
                     else
