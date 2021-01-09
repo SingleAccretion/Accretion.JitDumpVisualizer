@@ -36,7 +36,7 @@ namespace Accretion.JitDumpVisualizer.LexerGenerator
             matrix.Columns.RemoveAll(x => x.Bits.Distinct().Count() is 1);
             Print("Removed duplicate columns:\r\n", matrix);
 
-            Print("The item count is: ", matrix.Height);
+            Print("The item count is ", matrix.Height);
             var bitCount = (int)Math.Ceiling(Math.Log2(matrix.Height));
 
             Print("Started evaluating sets for bit count ", bitCount);
@@ -47,24 +47,49 @@ namespace Accretion.JitDumpVisualizer.LexerGenerator
                 sets.RemoveAll(HasDuplicateRows);
                 if (sets.Count is not 0)
                 {
-                    Print($"Found a unique set for bit count ", bitCount);
+                    Print($"Found some unique sets for bit count ", bitCount);
                     break;
                 }
 
                 Print($"Failed to find a unique set, incrementing the bit count to ", ++bitCount);
 
             } while (true);
-            
+
+            var groupedSets = sets.GroupBy(CountNumberOfHoles).OrderBy(x => x.Key);
+            Print("Grouped sets by the number of holes: ", string.Join(", ", groupedSets.Select(x => x.Key)));
+
+            sets = groupedSets.First().ToList();
+            Print("Group of sets with the least number of number of holes:\r\n", Stringify(sets));
+
             sets.Sort((x, y) => x.Max(z => z.OriginalIndex).CompareTo(y.Max(z => z.OriginalIndex)));
             Print("Sorted sets by proximity to the start of the input...");
 
             var winner = sets.First().Select(x => x.OriginalIndex).ToArray();
             Print("The winning bits are: ", string.Join(' ', winner));
 
-            var values = ComputeEnumerationValues(originalMatrix, winner);
-            Print($"The final values are: ", string.Join(", ", values));
+            var values = ComputeEnumerationValues(originalMatrix.Columns, winner);
+            Print($"The final values are: ", string.Join(", ", values.OrderBy(x => x)));
 
             return winner;
+        }
+
+        private static int CountNumberOfHoles(BitColumn[] columns)
+        {
+            var indecies = Enumerable.Range(0, columns.Length);
+            var values = ComputeEnumerationValues(columns, indecies);
+
+            var holes = -1;
+            int? last = null;
+            foreach (var item in values.OrderBy(x => x))
+            {
+                if (last != item - 1)
+                {
+                    holes++;
+                }
+                last = item;
+            }
+
+            return holes;
         }
 
         private static bool HasDuplicateRows(BitColumn[] columns)
@@ -116,21 +141,18 @@ namespace Accretion.JitDumpVisualizer.LexerGenerator
             }
         }
 
-        private static void Print(string message, object value = null)
+        static IEnumerable<int> ComputeEnumerationValues(IReadOnlyList<BitColumn> columns, IEnumerable<int> bitIndecies)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write(message);
-            Console.ResetColor();
-            Console.Write(value);
-            Console.WriteLine();
+            return ConvertToRows(columns).Select(x => ComputeEnumerationValue(x, bitIndecies));
         }
 
-        private static IEnumerable<int> ComputeEnumerationValues(BitMatrix matrix, int[] bitIndecies)
+        private static int ComputeEnumerationValue(byte?[] row, IEnumerable<int> bitIndecies)
         {
-            var rows = ConvertToRows(matrix.Columns);
-            var binaryValues = rows.Select(r => string.Join("", bitIndecies.Select(x => r[x])));
-            
-            return binaryValues.Select(x => Convert.ToInt32(string.Join("", x.Reverse()), 2)).OrderBy(x => x);
+            Debug.Assert(bitIndecies.Distinct().Count() == bitIndecies.Count());
+
+            // We reverse string because the parsing is big-endian, while we will be reading bits as little-endian
+            var binaryString = string.Join("", bitIndecies.Select(x => row[x]).Reverse());
+            return Convert.ToInt32(binaryString, 2);
         }
 
         private static List<byte?[]> ConvertToRows(IReadOnlyList<BitColumn> columns)
@@ -154,6 +176,15 @@ namespace Accretion.JitDumpVisualizer.LexerGenerator
         }
 
         private static string Stringify(IEnumerable<BitColumn[]> sets) => string.Join(' ', sets.Select(x => $"({string.Join<BitColumn>(',', x)})"));
+
+        private static void Print(string message, object value = null)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write(message);
+            Console.ResetColor();
+            Console.Write(value);
+            Console.WriteLine();
+        }
     }
 
     public class BitMatrix
