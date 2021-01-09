@@ -4,7 +4,10 @@ using Accretion.JitDumpVisualizer.Parsing.IO;
 using Accretion.JitDumpVisualizer.Parsing.Tokens.Lexing;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 {
@@ -16,11 +19,6 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         private const int InputBufferLength = 4 * 1024;
         private const int InputBufferSafetyPadding = 1 * 1024;
         private const int LookaheadLimit = 200;
-
-        public static Token[] Tokenize(string dump)
-        {
-            throw new NotImplementedException();
-        }
 
         public static Token[] Tokenize(FileReader fileReader)
         {
@@ -63,7 +61,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return tokens;
         }
 
-        private static void NextBlock(ref char* start, ref Token* tokens)
+        internal static void NextBlock(ref char* start, ref Token* tokens)
         {
             var end = start + InputBufferLength - LookaheadLimit;
             while (start < end)
@@ -165,13 +163,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
                     case TokenKind.BasicBlockFlagsColumnHeader:
                         Assert.Equal(start, Token.OneHundredAndThirySevenDashes);
-                        tokens = Store(tokens, TokenKind.BasicBlockTableCenter);
+                        tokens = Next(tokens, TokenKind.BasicBlockTableCenter);
                         start += 137;
                         continue;
 
                     case TokenKind.BasicBlockTableCenter:
                     ReturnBasicBlockTableRow:
-                        tokens = ParseBasicBlockTableRow(ref start, tokens);
+                        tokens = Pop(ParseBasicBlockTableRow(start, tokens), out start);
                         continue;
 
                     case TokenKind.BasicBlockILRangeEndInTable:
@@ -181,7 +179,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         {
                             case '-':
                                 Assert.Equal(start, Token.OneHundredAndThirySevenDashes);
-                                tokens = Store(tokens, TokenKind.BasicBlockTableFooter);
+                                tokens = Next(tokens, TokenKind.BasicBlockTableFooter);
                                 start += 137;
                                 continue;
                             default: goto ReturnBasicBlockTableRow;
@@ -208,34 +206,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         switch (*start)
                         {
                             case '[' or 'N':
-                                tokens = ParseGenTreeNodeDetalization(ref start, tokens);
+                                tokens = Pop(ParseGenTreeNodeDetalization(start, tokens), out start);
                                 continue;
                             default: goto UnstructuredData;
                         }
 
-                    case TokenKind.GenTreeNodeLocalVariableTemporaryNumber:
-                    case TokenKind.GenTreeNodeLocalVariableArgumentNumber:
-                        switch (startCopy[0])
-                        {
-                            case 'd':
-                                Assert.FormatEqual(startCopy, "d:0");
-                                kind = TokenKind.GenTreeNodeDNumber;
-                                rawValue = IntegersParser.ParseGenericInteger(startCopy + "d:".Length, out rawWidth);
-                                rawWidth += "d:".Length;
-                                break;
-                            case 'u':
-                                Assert.FormatEqual(startCopy, "u:0");
-                                kind = TokenKind.GenTreeNodeUNumber;
-                                rawValue = IntegersParser.ParseGenericInteger(startCopy + "u:".Length, out rawWidth);
-                                rawWidth += "u:".Length;
-                                break;
-                            default: goto StartGenTreeNodeDetalization;
-                        }
-                        break;
-
                     // Potential enhancement: emit a shadow token and switch on that
-                    case TokenKind.GenTreeNodeUNumber:
-                    case TokenKind.GenTreeNodeDNumber:
+                    case TokenKind.GenTreeNodeUseNumber:
+                    case TokenKind.GenTreeNodeDefinitionNumber:
                     case TokenKind.GenTreeNodeAssignmentIsCopy:
                     case TokenKind.GenTreeNodeIsCopy:
                     case TokenKind.GenTreeNodeIsInlineReturn:
@@ -250,6 +228,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     case TokenKind.GenTreeNodeIntegerConstantNull:
                     case TokenKind.GenTreeNodeLargeIntegerConstant:
                     case TokenKind.GenTreeNodeConstantIconHandle:
+                    case TokenKind.GenTreeNodeLastUse:
+                    case TokenKind.GenTreeNodeLocalVariableTemporaryNumber:
                         goto StartGenTreeNodeDetalization;
                     #endregion
 
@@ -303,7 +283,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
         {
             Assert.Equal(start, "BBnum BBid ref try hnd");
 
-            tokens = Store(tokens,
+            tokens = Next(tokens,
                 TokenKind.BasicBlockNumberColumnHeader,
                 TokenKind.BasicBlockIdColumnHeader,
                 TokenKind.BasicBlockRefCountInTable,
@@ -313,14 +293,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             if (start[23] is 'p')
             {
                 Assert.Equal(start + 23, "preds");
-                tokens = Store(tokens, TokenKind.BasicBlockPredsColumnHeader);
+                tokens = Next(tokens, TokenKind.BasicBlockPredsColumnHeader);
             }
 
             Assert.Equal(start + 39, "weight    lp [IL range]     [jump]      [EH region]         [flags]");
 
             start += 106;
 
-            return Store(tokens,
+            return Next(tokens,
                 TokenKind.BasicBlockWeightColumnHeader,
                 TokenKind.BasicBlockILRangeColumnHeader,
                 TokenKind.BasicBlockJumpTargetsColumnHeader,
@@ -328,50 +308,281 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.BasicBlockFlagsColumnHeader);
         }
 
-        private static Token* ParseBasicBlockTableRow(ref char* start, Token* tokens)
+        internal static Token* ParseBasicBlockTableRow(char* start, Token* tokens)
         {
-            tokens = Store(tokens, TokenKind.BasicBlockInTable, PeekBasicBlock(start));
+            tokens = Next(tokens, TokenKind.BasicBlockInTable, PeekBasicBlock(start));
             start += 6;
             Assert.FormatEqual(start, "0000]");
-            tokens = Store(tokens, TokenKind.BasicBlockIdInTable, IntegersParser.ParseIntegerFourDigits(start));
+            tokens = Next(tokens, TokenKind.BasicBlockIdInTable, IntegersParser.ParseIntegerFourDigits(start));
             start += 5;
             Assert.FormatEqual(start, "000", valid: ' ');
-            tokens = Store(tokens, TokenKind.BasicBlockRefCountInTable, IntegersParser.ParseGenericInteger(start, out _));
-            tokens = Store(tokens, TokenKind.BasicBlockTryColumnHeader, 0);
-            tokens = Store(tokens, TokenKind.BasicBlockHandleCountInTable, 0);
+            tokens = Next(tokens, TokenKind.BasicBlockRefCountInTable, IntegersParser.ParseGenericInteger(start, out _));
+            tokens = Next(tokens, TokenKind.BasicBlockTryColumnHeader, 0);
+            tokens = Next(tokens, TokenKind.BasicBlockHandleCountInTable, 0);
 
             start += 10;
             for (int i = 0; start[i] is 'B'; i += 5)
             {
-                tokens = Store(tokens, TokenKind.BasicBlockPredInTable, PeekBasicBlock(start + i));
+                tokens = Next(tokens, TokenKind.BasicBlockPredInTable, PeekBasicBlock(start + i));
             }
 
             start += 22;
-            tokens = Store(tokens, TokenKind.BasicBlockWeightInTable, (uint)BitConverter.SingleToInt32Bits(IntegersParser.ParseGenericFloat(start, out _)));
+            tokens = Next(tokens, TokenKind.BasicBlockWeightInTable, (uint)BitConverter.SingleToInt32Bits(IntegersParser.ParseGenericFloat(start, out _)));
             start += 10;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTable, PeekILRange(start));
+            tokens = Next(tokens, TokenKind.BasicBlockILRangeStartInTable, PeekILRange(start));
             start += 5;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTable, PeekILRange(start));
+            tokens = Next(tokens, TokenKind.BasicBlockILRangeEndInTable, PeekILRange(start));
             start += 4;
             if (*start is '-')
             {
                 Assert.Equal(start, "->");
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTable, PeekBasicBlock(start + 3));
+                tokens = Next(tokens, TokenKind.BasicBlockJumpTargetInTable, PeekBasicBlock(start + 3));
             }
             start += 8;
             if (*start is '(')
             {
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetKindInTable, (uint)Lexer.ParseBasicBlockJumpTargetKind(start, out _));
+                tokens = Next(tokens, TokenKind.BasicBlockJumpTargetKindInTable, (uint)Lexer.ParseBasicBlockJumpTargetKind(start, out _));
             }
             start += 29;
             while (IsNotEndOfLine(start + 1))
             {
-                var dbg = new string(start, 0, 100);
-                tokens = Store(tokens, TokenKind.BasicBlockFlagInTable, (uint)Lexer.ParseBasicBlockFlag(start, out var width));
+                tokens = Next(tokens, TokenKind.BasicBlockFlagInTable, (uint)Lexer.ParseBasicBlockFlag(start, out var width));
                 start += width + 1;
             }
 
-            return tokens;
+            return Push(tokens, start);
+        }
+
+        internal static Token* ParseBasicBlockTableRowManualCalls(char* start, Token* tokens)
+        {
+            var returnAddress = -1;
+            nint i = 0;
+        Return:
+            switch (returnAddress)
+            {
+                case -1:
+                    tokens = NextKind(tokens, TokenKind.BasicBlockInTable);
+
+                    returnAddress = 0;
+                    goto PeekBasicBlock;
+                case 0:
+                    start += 6;
+                    tokens = NextKind(tokens, TokenKind.BasicBlockIdInTable);
+
+                    returnAddress = 1;
+                    goto ParseIntegerFourDigits;
+                case 1:
+                    start += 5;
+                    tokens = NextKind(tokens, TokenKind.BasicBlockRefCountInTable);
+
+                    returnAddress = 2;
+                    goto ParseGenericInteger;
+                case 2:
+                    tokens = Next(tokens, TokenKind.BasicBlockTryColumnHeader, 0);
+                    tokens = Next(tokens, TokenKind.BasicBlockHandleCountInTable, 0);
+                    start += 7;
+
+                    returnAddress = 3;
+                    goto case 3;
+                case 3:
+                    if (start[i] is 'B')
+                    {
+                        tokens = NextKind(tokens, TokenKind.BasicBlockPredInTable);
+                        i += 5;
+                        goto PeekBasicBlock;
+                    };
+
+                    start += 22;
+                    tokens = NextKind(tokens, TokenKind.BasicBlockWeightInTable);
+
+                    returnAddress = 4;
+                    goto ParseGenericFloat;
+                case 4:
+                    start += 10;
+                    tokens = NextKind(tokens, TokenKind.BasicBlockILRangeStartInTable);
+
+                    returnAddress = 5;
+                    goto PeekILRange;
+                case 5:
+                    start += 5;
+                    tokens = NextKind(tokens, TokenKind.BasicBlockILRangeEndInTable);
+
+                    returnAddress = 6;
+                    goto PeekILRange;
+                case 6:
+                    start += 4;
+                    if (*start is '-')
+                    {
+                        start += 3;
+                        tokens = NextKind(tokens, TokenKind.BasicBlockJumpTargetInTable);
+
+                        returnAddress = 7;
+                        goto PeekBasicBlock;
+                    }
+                    goto Continue;
+                case 7:
+                    start -= 3;
+                Continue:
+                    start += 8;
+                    if (*start is '(')
+                    {
+                        tokens = NextKind(tokens, TokenKind.BasicBlockJumpTargetKindInTable);
+
+                        returnAddress = 8;
+                        goto ParseBasicBlockJumpTargetKindIgnoreWidth;
+                    }
+                    goto case 8;
+                case 8:
+                    start += 28;
+                    goto case 9;
+                case 9:
+                    start += 1;
+                    if (IsNotEndOfLine(start))
+                    {
+                        tokens = NextKind(tokens, TokenKind.BasicBlockFlagInTable);
+
+                        returnAddress = 9;
+                        goto ParseBasicBlockFlag;
+                    }
+                    goto default;
+                default:
+                    return Push(tokens, start);
+            }
+        ParseIntegerFourDigits:
+            var characters = Sse2.LoadScalarVector128((long*)start).AsInt16();
+            var values = Sse2.Subtract(characters, Vector128.Create('0').AsInt16());
+            var result = Sse2.MultiplyAddAdjacent(values, Vector128.Create(1000, 100, 10, 1, 0, 0, 0, 0)).AsUInt32();
+
+            tokens = NextValue(tokens, result.GetElement(0) + result.GetElement(1));
+            goto Return;
+        ParseGenericInteger:
+            while (*start is ' ')
+            {
+                start++;
+            }
+
+            nint digitCount = 0;
+            var digits = stackalloc uint[32];
+            while ((uint)(*start - '0') is <= 9 and var digit)
+            {
+                digits[digitCount] = digit;
+                digitCount++;
+                start++;
+            }
+
+            var number = 0u;
+            var multiplier = 1u;
+            for (nint j = digitCount - 1; j >= 0; j--)
+            {
+                number += digits[j] * multiplier;
+                multiplier *= 10;
+            }
+
+            tokens = NextValue(tokens, number);
+            goto Return;
+        PeekBasicBlock:
+            var d1 = (uint)start[2] - '0';
+            var d2 = (uint)start[3] - '0';
+
+            tokens = NextValue(tokens, d1 * 10 + d2);
+            goto Return;
+        ParseGenericFloat:
+            i = 0;
+            var fpDigits = stackalloc float[16];
+            digitCount = 0;
+            nint dotPosition = 0;
+            while (true)
+            {
+                switch (start[i])
+                {
+                    case <= '9' and >= '0' and var digitChar:
+                        fpDigits[i] = digitChar - '0';
+                        digitCount++;
+                        break;
+                    case '.':
+                        dotPosition = i;
+                        break;
+                    default:
+                        if (dotPosition is 0)
+                        {
+                            dotPosition = digitCount;
+                        }
+                        var fpNumber = 0f;
+                        var fpMultiplier = 1f;
+                        for (i = dotPosition - 1; i >= 0; i--)
+                        {
+                            fpNumber += fpDigits[i] * fpMultiplier;
+                            fpMultiplier *= 10f;
+                        }
+                        fpMultiplier = 0.1f;
+                        for (i = dotPosition + 1; i <= digitCount; i++)
+                        {
+                            fpNumber += fpDigits[i] * fpMultiplier;
+                            fpMultiplier *= 0.1f;
+                        }
+                        tokens = NextValue(tokens, (uint)BitConverter.SingleToInt32Bits(fpNumber));
+                        goto Return;
+                }
+
+                i++;
+            }
+        PeekILRange:
+            switch (*start)
+            {
+                case '?':
+                    Assert.Equal(start, "???");
+                    tokens = NextValue(tokens, unchecked((uint)-1));
+                    goto Return;
+                default:
+                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                    static uint ToHexDigit(char ch) => ch switch
+                    {
+                        >= 'a' and <= 'f' => (uint)ch - 'a',
+                        >= 'A' and <= 'F' => (uint)ch - 'A',
+                        _ => (uint)ch - '0'
+                    };
+
+                    d1 = ToHexDigit(start[0]);
+                    d2 = ToHexDigit(start[1]);
+                    var d3 = ToHexDigit(start[2]);
+
+                    tokens = NextValue(tokens, d1 * 16 * 16 + d2 * 16 + d3);
+                    goto Return;
+            }
+        ParseBasicBlockJumpTargetKindIgnoreWidth:
+            var kind = (start[2]) switch
+            {
+                'c' => BasicBlockJumpTargetKind.Conditional,
+                'l' => BasicBlockJumpTargetKind.Always,
+                'e' => BasicBlockJumpTargetKind.Return,
+                _ => BasicBlockJumpTargetKind.Conditional
+            };
+
+            tokens = NextValue(tokens, (uint)kind);
+            goto Return;
+        ParseBasicBlockFlag:
+            var flag = (*start) switch
+            {
+                'i' => (start[1]) switch
+                {
+                    'd' => Lexer.Result(BasicBlockFlag.IdxLen, "idxlen", ref start),
+                    'n' => Lexer.Result(BasicBlockFlag.Internal, "internal", ref start),
+                    _ => Lexer.Result(BasicBlockFlag.I, "i", ref start)
+                },
+                'l' => Lexer.Result(BasicBlockFlag.Label, "label", ref start),
+                't' => Lexer.Result(BasicBlockFlag.Target, "target", ref start),
+                'h' => Lexer.Result(BasicBlockFlag.HasCall, "hascall", ref start),
+                'n' => (start[1]) switch
+                {
+                    'e' => Lexer.Result(BasicBlockFlag.NewObj, "newobj", ref start),
+                    _ => Lexer.Result(BasicBlockFlag.NullCheck, "nullcheck", ref start)
+                },
+                'g' => Lexer.Result(BasicBlockFlag.GCSafe, "gcsafe", ref start),
+                _ => Lexer.Result(BasicBlockFlag.LIR, "LIR", ref start)
+            };
+
+            tokens = NextValue(tokens, (uint)flag);
+            goto Return;
         }
 
         private static Token* ParseBasicBlockDetalizationTopHeader(ref char* start, Token* tokens)
@@ -380,7 +591,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             {
                 while (*start is 'B')
                 {
-                    tokens = Store(tokens, kind, PeekBasicBlock(start));
+                    tokens = Next(tokens, kind, PeekBasicBlock(start));
                     start += 5;
                 }
                 if (*start is '}')
@@ -391,22 +602,22 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 return tokens;
             }
 
-            tokens = Store(tokens, TokenKind.BasicBlockInTopHeader, PeekBasicBlock(start));
+            tokens = Next(tokens, TokenKind.BasicBlockInTopHeader, PeekBasicBlock(start));
             start += 6;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeStartInTopHeader, PeekILRange(start));
+            tokens = Next(tokens, TokenKind.BasicBlockILRangeStartInTopHeader, PeekILRange(start));
             start += 5;
-            tokens = Store(tokens, TokenKind.BasicBlockILRangeEndInTopHeader, PeekILRange(start));
+            tokens = Next(tokens, TokenKind.BasicBlockILRangeEndInTopHeader, PeekILRange(start));
             start += 5;
             if (*start is '-')
             {
                 Assert.Equal(start, "-> ");
                 start += 3;
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetInTopHeader, PeekBasicBlock(start));
+                tokens = Next(tokens, TokenKind.BasicBlockJumpTargetInTopHeader, PeekBasicBlock(start));
                 start += 5;
             }
             if (*start is '(')
             {
-                tokens = Store(tokens, TokenKind.BasicBlockJumpTargetKindInTopHeader, (uint)Lexer.ParseBasicBlockJumpTargetKind(start, out var width));
+                tokens = Next(tokens, TokenKind.BasicBlockJumpTargetKindInTopHeader, (uint)Lexer.ParseBasicBlockJumpTargetKind(start, out var width));
                 start += width + 1;
             }
 
@@ -423,25 +634,25 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
 
         private static Token* ParseBasicBlockDetalizationInnerHeader(ref char* start, Token* tokens)
         {
-            tokens = Store(tokens, TokenKind.BasicBlockInInnerHeader, PeekBasicBlock(start));
+            tokens = Next(tokens, TokenKind.BasicBlockInInnerHeader, PeekBasicBlock(start));
             start += 4;
             start = *start is ',' ? start + 2 : SkipEndOfLine(start);
             if (*start is 'S')
             {
-                tokens = Store(tokens, TokenKind.Statement, PeekStatement(start));
+                tokens = Next(tokens, TokenKind.Statement, PeekStatement(start));
                 start += 9;
 
                 if (*start is '(')
                 {
-                    tokens = Store(tokens, TokenKind.StatementDetalizationState, (uint)Lexer.ParseStatementDetalizationState(start, out var width));
+                    tokens = Next(tokens, TokenKind.StatementDetalizationState, (uint)Lexer.ParseStatementDetalizationState(start, out var width));
                     start += width;
                 }
                 else
                 {
                     start += 7;
-                    tokens = Store(tokens, TokenKind.StatementILRangeStart, PeekILRange(start));
+                    tokens = Next(tokens, TokenKind.StatementILRangeStart, PeekILRange(start));
                     start += 8;
-                    tokens = Store(tokens, TokenKind.StatementILRangeEnd, PeekILRange(start));
+                    tokens = Next(tokens, TokenKind.StatementILRangeEnd, PeekILRange(start));
                     start += 4;
                 }
             }
@@ -449,60 +660,61 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return tokens;
         }
 
-        private static Token* ParseGenTreeNodeDetalization(ref char* start, Token* tokens)
+        private static Token* ParseGenTreeNodeDetalization(char* start, Token* tokens)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static Token* StoreGenTreeTypeName(ref char* start, Token* tokens)
+            static Token* StoreGenTreeTypeName(char* start, Token* tokens)
             {
                 Assert.Equal(start - 7, "struct<");
-                tokens = Store(tokens, TokenKind.GenTreeNodeTypeName, ParseGenTreeNodeTypeName(start, out var nameWidth).Value);
+                tokens = Next(tokens, TokenKind.GenTreeNodeTypeName, LexGenTreeNodeTypeName(start, out var nameWidth).Value);
                 start += nameWidth + 1;
-                return tokens;
+
+                return Push(tokens, start);
             }
 
             if (*start is 'N')
             {
                 Assert.FormatEqual(start, "N000");
-                tokens = Store(tokens, TokenKind.GenTreeNodeSequenceNumber, IntegersParser.ParseIntegerThreeDigits(start + 1));
+                tokens = Next(tokens, TokenKind.GenTreeNodeSequenceNumber, IntegersParser.ParseIntegerThreeDigits(start + 1));
                 start += 6;
                 Assert.FormatEqual(start - 1, "(000,000)", valid: ' ');
-                tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedTime, IntegersParser.ParseGenericInteger(start, out _));
+                tokens = Next(tokens, TokenKind.GenTreeNodeEstimatedTime, IntegersParser.ParseGenericInteger(start, out _));
                 start += 4;
-                tokens = Store(tokens, TokenKind.GenTreeNodeEstimatedCost, IntegersParser.ParseGenericInteger(start, out _));
+                tokens = Next(tokens, TokenKind.GenTreeNodeEstimatedCost, IntegersParser.ParseGenericInteger(start, out _));
                 start += 5;
             }
 
             Assert.FormatEqual(start, "[000000]");
             start++;
-            tokens = Store(tokens, TokenKind.GenTreeNodeId, IntegersParser.ParseIntegerSixDigits(start));
+            tokens = Next(tokens, TokenKind.GenTreeNodeId, IntegersParser.ParseIntegerSixDigits(start));
             start += 8;
-            tokens = Store(tokens, TokenKind.GenTreeNodeFlags, (uint)Lexer.ParseGenTreeNodeFlags(start));
+            tokens = Next(tokens, TokenKind.GenTreeNodeFlags, (uint)Lexer.ParseGenTreeNodeFlags(start));
             start += 13;
 
             switch (*start)
             {
                 case 'p':
                     Assert.Equal(start, "pred");
-                    tokens = Store(tokens, TokenKind.GenTreeNodePred, PeekBasicBlock(start + 5));
+                    tokens = Next(tokens, TokenKind.GenTreeNodePred, PeekBasicBlock(start + 5));
                     break;
                 case 't':
                     Assert.Equal(start, "this");
-                    tokens = Store(tokens, TokenKind.GenTreeNodeThisArgumentInfo);
+                    tokens = Next(tokens, TokenKind.GenTreeNodeThisArgumentInfo);
                     var width = 4;
                     goto StoreArgumentInfo;
                 case 'a':
-                    tokens = Store(tokens, TokenKind.GenTreeNodeArgumentInfo, PeekArgument(start, out width));
+                    tokens = Next(tokens, TokenKind.GenTreeNodeArgumentInfo, PeekArgument(start, out width));
                     goto StoreArgumentInfo;
                 StoreArgumentInfo:
                     switch (start[width + 1])
                     {
                         case 'S':
                             Assert.Equal(start + width + 1, "SETUP");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeArgumentInfoSetup);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeArgumentInfoSetup);
                             break;
                         case 'i':
                             Assert.Equal(start + width + 1, "in");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeArgumentInfoRegister, (uint)Lexer.ParseRegister(start + width + 4, out _));
+                            tokens = Next(tokens, TokenKind.GenTreeNodeArgumentInfoRegister, (uint)Lexer.ParseRegister(start + width + 4, out _));
                             break;
                         default:
                             break;
@@ -520,9 +732,9 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             }
             Assert.Equal(start, "*  ");
             start += 3;
-            tokens = Store(tokens, TokenKind.GenTreeNodePadding, padding);
+            tokens = Next(tokens, TokenKind.GenTreeNodePadding, padding);
             var kind = Lexer.ParseGenTreeNodeKind(start, out var kindWidth);
-            tokens = Store(tokens, TokenKind.GenTreeNodeKind, (uint)kind);
+            tokens = Next(tokens, TokenKind.GenTreeNodeKind, (uint)kind);
             start += kindWidth + 1;
 
             switch (*start)
@@ -535,14 +747,14 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 // We're missing ind, stub, r2r_ind, unmanaged calls...
                 case 'n' when kind is GenTreeNodeKind.CALL:
                     Assert.Equal(start, "nullcheck");
-                    tokens = Store(tokens, TokenKind.GenTreeNodeNullcheck);
+                    tokens = Next(tokens, TokenKind.GenTreeNodeNullcheck);
                     start += 5;
                     break;
                 default: break;
             }
 
             start += Math.Max(0, 9 - kindWidth);
-            tokens = Store(tokens, TokenKind.GenTreeNodeType, (uint)Lexer.ParseGenTreeNodeType(start, out _));
+            tokens = Next(tokens, TokenKind.GenTreeNodeType, (uint)Lexer.ParseGenTreeNodeType(start, out _));
             start += 7;
 
             switch (kind)
@@ -551,7 +763,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     if (*start is 'n')
                     {
                         Assert.Equal(start, "null");
-                        tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantNull);
+                        tokens = Next(tokens, TokenKind.GenTreeNodeIntegerConstantNull);
                         start += 4;
                         break;
                     }
@@ -559,10 +771,10 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     if (start[-10] is 'h')
                     {
                         Assert.FormatEqual(start, "0x00000000", hex: true);
-                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantHandle);
+                        tokens = Next(tokens, TokenKind.GenTreeNodeConstantHandle);
                         start += 11;
                         // Note: this doesn't handle literal constant strings: "Constant string"
-                        tokens = Store(tokens, TokenKind.GenTreeNodeConstantIconHandle, (uint)Lexer.ParseGenTreeNodeConstantIconHandle(start, out var handleWidth));
+                        tokens = Next(tokens, TokenKind.GenTreeNodeConstantIconHandle, (uint)Lexer.ParseGenTreeNodeConstantIconHandle(start, out var handleWidth));
                         start += handleWidth;
                     }
                     else
@@ -570,13 +782,13 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         if (start[1] is 'x')
                         {
                             Assert.FormatEqual(start, "0x000000000000", hex: true);
-                            tokens = Store(tokens, TokenKind.GenTreeNodeLargeIntegerConstant, ParseLargeHexInteger(start + 2, out _).Value);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeLargeIntegerConstant, LexLargeHexInteger(start + 2, out _).Value);
                             start += 14;
                         }
                         else
                         {
                             // These are values between -1000 and 1000
-                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstant, IntegersParser.ParseGenericInteger(start, out var integerWidth));
+                            tokens = Next(tokens, TokenKind.GenTreeNodeIntegerConstant, IntegersParser.ParseGenericInteger(start, out var integerWidth));
                             start += integerWidth;
                         }
                     }
@@ -586,16 +798,16 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                         case 'f':
                             Assert.Equal(start + 1, "field offset");
                             start += 13;
-                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantIsFieldSequenceOffset);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeIntegerConstantIsFieldSequenceOffset);
                             break;
                         case 'v':
                             Assert.Equal(start + 1, "vector element count");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantIsVectorElementCount);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeIntegerConstantIsVectorElementCount);
                             start += 20;
                             break;
                         case 'r':
                             Assert.Equal(start + 1, "reuse reg val");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeIntegerConstantReuseRegisterValue);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeIntegerConstantReuseRegisterValue);
                             start += 13;
                             break;
                         default: break;
@@ -604,62 +816,63 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     if (start[1] is 'F')
                     {
                         start += 1;
-                        tokens = ParseGenTreeNodeFieldSequence(ref start, tokens);
+                        tokens = Pop(ParseGenTreeNodeFieldSequence(start, tokens), out start);
                     }
                     break;
                 case GenTreeNodeKind.CALL:
                     if (start[-9] is 'p')
                     {
                         Assert.Equal(start - 12, "help");
-                        tokens = Store(tokens, TokenKind.GenTreeNodeHelperMethod, (uint)Lexer.ParseRyuJitHelperMethod(start, out var methodWidth));
+                        tokens = Next(tokens, TokenKind.GenTreeNodeHelperMethod, (uint)Lexer.ParseRyuJitHelperMethod(start, out var methodWidth));
                         start += methodWidth;
                     }
                     else
                     {
-                        tokens = Store(tokens, TokenKind.GenTreeNodeMethodName, ParseGenTreeNodeMethodName(start, out var methodWidth).Value);
+                        tokens = Next(tokens, TokenKind.GenTreeNodeMethodName, LexGenTreeNodeMethodName(start, out var methodWidth).Value);
                         start += methodWidth;
                         if (start[1] is '(')
                         {
                             Assert.Equal(start, " (exactContextHnd=0x");
                             start += 20;
                             Assert.FormatEqual(start, "0000000000000000)", hex: true);
-                            tokens = Store(tokens, TokenKind.GenTreeNodeMethodHandle, ParseLargeHexInteger(start, out _).Value);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeMethodHandle, LexLargeHexInteger(start, out _).Value);
                             start += 17;
                         }
                     }
                     break;
                 case GenTreeNodeKind.OBJ:
-                    tokens = StoreGenTreeTypeName(ref start, tokens);
+                    tokens = Pop(StoreGenTreeTypeName(start, tokens), out start);
                     break;
+                case GenTreeNodeKind.PHI_ARG:
                 case GenTreeNodeKind.LCL_VAR:
                     if (tokens[-1].GenTreeNodeType is GenTreeNodeType.Struct)
                     {
-                        tokens = StoreGenTreeTypeName(ref start, tokens);
+                        tokens = Pop(StoreGenTreeTypeName(start, tokens), out start);
                         if (*start is '(')
                         {
                             switch (start[1])
                             {
                                 case 'A':
                                     Assert.Equal(start, "(AX)");
-                                    tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsAddressExposed);
+                                    tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableIsAddressExposed);
                                     start += 4;
                                     break;
                                 case 'U':
                                     Assert.Equal(start, "(U)");
-                                    tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsUnusedStruct);
+                                    tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableIsUnusedStruct);
                                     start += 3;
                                     break;
                                 default:
                                     if (start[2] is '?')
                                     {
                                         Assert.Equal(start, "(P?!)");
-                                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStructBeingRewritten);
+                                        tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStructBeingRewritten);
                                         start += 5;
                                     }
                                     else
                                     {
                                         Assert.Equal(start, "(P)");
-                                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStruct);
+                                        tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableIsPromotedStruct);
                                         start += 3;
                                     }
                                     break;
@@ -670,37 +883,59 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     }
                     Assert.FormatEqual(start, "V00");
                     start += 1;
-                    tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableIndex, IntegersParser.ParseIntegerTwoDigits(start));
+                    tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableIndex, IntegersParser.ParseIntegerTwoDigits(start));
                     start += 3;
                     switch (*start)
                     {
                         case 'a':
-                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableArgumentNumber, PeekArgument(start, out _));
+                            tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableArgumentNumber, PeekArgument(start, out _));
                             start += 13;
                             break;
                         default:
                             Assert.FormatEqual(start, "tmp0");
                             start += 3;
-                            tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableTemporaryNumber, IntegersParser.ParseGenericInteger(start, out _));
+                            tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableTemporaryNumber, IntegersParser.ParseGenericInteger(start, out _));
                             start += 10;
                             break;
+                    }
+                    switch (*start)
+                    {
+                        case 'd':
+                            Assert.FormatEqual(start, "d:0");
+                            start += 2;
+                            tokens = Next(tokens, TokenKind.GenTreeNodeDefinitionNumber, IntegersParser.ParseGenericInteger(start, out var definitionWidth));
+                            start += definitionWidth;
+                            break;
+                        case 'u':
+                            Assert.FormatEqual(start, "u:0");
+                            start += 2;
+                            tokens = Next(tokens, TokenKind.GenTreeNodeUseNumber, IntegersParser.ParseGenericInteger(start, out var useWidth));
+                            start += useWidth;
+                            if (start[1] is '(')
+                            {
+                                Assert.Equal(start + 1, "(last use)");
+                                tokens = Next(tokens, TokenKind.GenTreeNodeLastUse);
+                                start += 11;
+                            }
+                            break;
+                        default: break;
                     }
                     if (start[1] is 'Z')
                     {
                         Assert.Equal(start + 1, "Zero");
                         start += 6;
-                        tokens = Store(tokens, TokenKind.GenTreeNodeLocalVariableHasZeroOffsetFieldSequence);
-                        tokens = ParseGenTreeNodeFieldSequence(ref start, tokens);
+                        tokens = Next(tokens, TokenKind.GenTreeNodeLocalVariableHasZeroOffsetFieldSequence);
+                        tokens = Pop(ParseGenTreeNodeFieldSequence(start, tokens), out start);
                     }
                     break;
                 case GenTreeNodeKind.RET_EXPR:
                     Assert.FormatEqual(start - 1, "(inl return from call [000000])");
                     start += 22;
-                    tokens = Store(tokens, TokenKind.GenTreeNodeIsInlineReturn, IntegersParser.ParseIntegerSixDigits(start));
+                    tokens = Next(tokens, TokenKind.GenTreeNodeIsInlineReturn, IntegersParser.ParseIntegerSixDigits(start));
                     start += 8;
                     break;
                 case GenTreeNodeKind.FIELD:
-                    tokens = Store(tokens, TokenKind.GenTreeNodeFieldName, ParseGenTreeNodeFieldName(start, out var nameWidth, '\r', '\n').Value);
+                    tokens = Next(tokens, TokenKind.GenTreeNodeFieldName, LexGenTreeNodeFieldName(start, out var nameWidth, '\r', '\n').Value);
                     start += nameWidth;
                     break;
                 case GenTreeNodeKind.ASG:
@@ -708,12 +943,12 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     {
                         case 'i':
                             Assert.Equal(start, "(init)");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
                             start += 6;
                             break;
                         case 'c':
                             Assert.Equal(start, "(copy)");
-                            tokens = Store(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
+                            tokens = Next(tokens, TokenKind.GenTreeNodeAssignmentIsCopy);
                             start += 6;
                             break;
                         default: goto Backtrack;
@@ -723,7 +958,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                     while (start[-3] is '<')
                     {
                         Assert.Equal(start - 3, "<-");
-                        tokens = Store(tokens, TokenKind.GenTreeNodeCastType, (uint)Lexer.ParseGenTreeNodeType(start, out var typeWidth));
+                        tokens = Next(tokens, TokenKind.GenTreeNodeCastType, (uint)Lexer.ParseGenTreeNodeType(start, out var typeWidth));
                         start += typeWidth + 4;
                     }
                     start -= 4;
@@ -743,23 +978,23 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 Assert.Equal(start, "\n");
             }
 
-            return tokens;
+            return Push(tokens, start);
         }
 
-        private static Token* ParseGenTreeNodeFieldSequence(ref char* start, Token* tokens)
+        private static Token* ParseGenTreeNodeFieldSequence(char* start, Token* tokens)
         {
             Assert.Equal(start, "Fseq[");
             start += 5;
             while (start[-2] is not ']')
             {
-                var name = ParseGenTreeNodeFieldName(start, out var width, ',', ']').Value;
-                tokens = Store(tokens, TokenKind.GenTreeNodeFieldName, name);
+                var name = LexGenTreeNodeFieldName(start, out var width, ',', ']').Value;
+                tokens = Next(tokens, TokenKind.GenTreeNodeFieldName, name);
                 start += width + 2;
             }
             start -= 1;
             Assert.Equal(start - 1, "]");
 
-            return tokens;
+            return Push(tokens, start);
         }
 
         private static int PeekILRange(char* start)
@@ -794,7 +1029,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return (int)index;
         }
 
-        public static TypeNameHandle ParseGenTreeNodeTypeName(char* start, out int width)
+        private static TypeNameHandle LexGenTreeNodeTypeName(char* start, out int width)
         {
             Assert.NotEqual(start, "-");
 
@@ -807,7 +1042,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return new TypeNameHandle(0);
         }
 
-        private static MethodNameHandle ParseGenTreeNodeMethodName(char* start, out int width)
+        private static MethodNameHandle LexGenTreeNodeMethodName(char* start, out int width)
         {
             // Technically UB
             var index = new Span<char>(start, int.MaxValue).IndexOfAny(' ', '\r', '\n');
@@ -818,7 +1053,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return new MethodNameHandle(0);
         }
 
-        private static FieldNameHandle ParseGenTreeNodeFieldName(char* start, out int width, char endCharOne, char endCharTwo)
+        private static FieldNameHandle LexGenTreeNodeFieldName(char* start, out int width, char endCharOne, char endCharTwo)
         {
             // Technically UB
             var index = new Span<char>(start, int.MaxValue).IndexOfAny(endCharOne, endCharTwo);
@@ -827,7 +1062,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return new FieldNameHandle(0);
         }
 
-        private static LargeIntegerHandle ParseLargeHexInteger(char* start, out int width)
+        private static LargeIntegerHandle LexLargeHexInteger(char* start, out int width)
         {
             width = 0;
             while (start[width] is

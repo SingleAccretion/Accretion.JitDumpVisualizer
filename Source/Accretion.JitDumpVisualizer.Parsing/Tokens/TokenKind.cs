@@ -75,8 +75,8 @@
         GenTreeNodeLocalVariableIndex,
         GenTreeNodeLocalVariableTemporaryNumber,
         GenTreeNodeLocalVariableArgumentNumber,
-        GenTreeNodeDNumber,
-        GenTreeNodeUNumber,
+        GenTreeNodeDefinitionNumber,
+        GenTreeNodeUseNumber,
         GenTreeNodeAssignmentIsCopy,
         GenTreeNodeIsCopy,
         GenTreeNodeIsInlineReturn,
@@ -107,5 +107,6 @@
         GenTreeNodeIntegerConstantIsVectorElementCount,
         GenTreeNodeIntegerConstantReuseRegisterValue,
         GenTreeNodeLocalVariableHasZeroOffsetFieldSequence,
+        GenTreeNodeLastUse,
     }
 }

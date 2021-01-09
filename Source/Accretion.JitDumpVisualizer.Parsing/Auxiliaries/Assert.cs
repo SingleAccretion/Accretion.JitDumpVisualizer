@@ -18,7 +18,7 @@ namespace Accretion.JitDumpVisualizer.Parsing.Auxiliaries
 
         [Conditional(DebugMode)]
         public static void NotEqual(char* start, string invalid, string? message = null) =>
-            True(new string(start, 0, invalid.Length) != invalid, $"Unexpected string '{Expand(start)}'.");
+            True(new string(start, 0, invalid.Length) != invalid, $"Unexpected string: '{Expand(start)}'.");
 
         [Conditional(DebugMode)]
         public static void Equal(char* start, string expected, string? message = null) =>

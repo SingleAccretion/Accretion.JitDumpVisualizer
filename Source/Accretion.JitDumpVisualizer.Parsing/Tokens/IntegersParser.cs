@@ -41,25 +41,49 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
             return result;
         }
 
-        public static float ParseGenericFloat(char* start, out int digitCount)
+        public static float ParseGenericFloat(char* start, out nint width)
         {
-            digitCount = 0;
-            bool isFraction = false;
+            nint i = 0;
+            var fpDigits = stackalloc float[16];
+            nint digitCount = 0;
+            nint dotPosition = 0;
             while (true)
             {
-                switch (start[digitCount])
+                switch (start[i])
                 {
-                    case <= '9' and >= '0': break;
+                    case <= '9' and >= '0' and var digitChar:
+                        fpDigits[i] = digitChar - '0';
+                        digitCount++;
+                        break;
                     case '.':
-                        Assert.True(!isFraction, "There cannot be two");
-                        isFraction = true;
+                        dotPosition = i;
                         break;
                     default:
-                        Assert.True(digitCount != 0);
-                        return float.Parse(new ReadOnlySpan<char>(start, (int)digitCount));
+                        width = digitCount + 1;
+                        if (dotPosition is 0)
+                        {
+                            width--;
+                            dotPosition = digitCount;
+                        }
+
+                        var fpNumber = 0f;
+                        var fpMultiplier = 1f;
+                        for (i = dotPosition - 1; i >= 0; i--)
+                        {
+                            fpNumber += fpDigits[i] * fpMultiplier;
+                            fpMultiplier *= 10f;
+                        }
+                        fpMultiplier = 0.1f;
+                        for (i = dotPosition + 1; i <= digitCount; i++)
+                        {
+                            fpNumber += fpDigits[i] * fpMultiplier;
+                            fpMultiplier *= 0.1f;
+                        }
+
+                        return fpNumber;
                 }
 
-                digitCount++;
+                i++;
             }
         }
 

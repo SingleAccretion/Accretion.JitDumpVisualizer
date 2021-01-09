@@ -1,8 +1,6 @@
 using Accretion.JitDumpVisualizer.Parsing.IO;
-using Accretion.JitDumpVisualizer.Parsing.Parser;
 using Accretion.JitDumpVisualizer.Parsing.Tokens;
 using BenchmarkDotNet.Running;
-using Microsoft.Diagnostics.Tracing.Parsers.JScript;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Accretion.JitDumpVisualizer.CLI
 {
@@ -18,10 +15,21 @@ namespace Accretion.JitDumpVisualizer.CLI
     {
         static void Main(string[] args)
         {
-#if RELEASE
-            BenchmarkRunner.Run<LexerBenchmarks>();
+            var a = new TokenizerBenchmarks();
+            while (true)
+            {
+                a.TokenizeTableRowManual();
+            }
+            TokenizerBenchmarks.DumpTokens();
+            Console.WriteLine("New:");
+            a.TokenizeTableRowManual();
+            TokenizerBenchmarks.DumpTokens();
+
             return;
-            
+#if RELEASE
+            BenchmarkRunner.Run<TokenizerBenchmarks>();
+            return;
+
             MeasureNextThroughput();
             return;
 #endif

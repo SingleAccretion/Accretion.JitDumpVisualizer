@@ -52,8 +52,8 @@ namespace Accretion.JitDumpVisualizer.Parsing.Tokens
                 TokenKind.GenTreeNodeLocalVariableIndex or
                 TokenKind.GenTreeNodeLocalVariableTemporaryNumber or
                 TokenKind.GenTreeNodeLocalVariableArgumentNumber or
-                TokenKind.GenTreeNodeUNumber or 
-                TokenKind.GenTreeNodeDNumber or
+                TokenKind.GenTreeNodeUseNumber or 
+                TokenKind.GenTreeNodeDefinitionNumber or
                 TokenKind.GenTreeNodePadding => RawValue,
                 TokenKind.GenTreeNodeArgumentInfoRegister => (Register)RawValue,
                 TokenKind.StatementDetalizationState => (DetalizationState)RawValue,
